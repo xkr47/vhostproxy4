@@ -5,7 +5,8 @@ import io.vertx.ceylon.core.streams {
 }
 //import io.vertx.core.http { HttpHeaders { ... } }
 import ceylon.collection {
-    HashSet
+    HashSet,
+    HashMap
 }
 import io.netty.handler.codec.http {
     HttpHeaders { Names, Values }
@@ -66,6 +67,22 @@ void copyEndToEndHeaders(MultiMap from, MultiMap to) {
     }
 }
 
+class NextHop(
+    shared String matchHost,
+    shared String host,
+    shared Integer port,
+    shared Boolean enabled = true,
+    shared Boolean forceHttps = false,
+    shared String[]? accessGroups = null,
+    shared String nextHost = host + ":" + port.string
+) {}
+
+[NextHop+] hops = [
+NextHop { matchHost = "kala"; host = "localhost"; port = 8090; nextHost = "simpura"; }
+];
+Map<String, NextHop> nextHopMap = HashMap<String, NextHop>{ entries = { for(i in hops) i.matchHost -> i }; };
+NextHop? resolveNextHop(String host) => nextHopMap.get(host);
+
 String dumpCReq(HttpClientRequest req) => "\n\t" + req.method().name + " " + req.uri() + dumpHeaders(req.headers());
 String dumpSReq(HttpServerRequest req) => "\n\t" + req.method().name + " " + req.uri() + dumpHeaders(req.headers());
 String dumpCRes(HttpClientResponse res) => "\n\t" + res.statusCode().string + " " + res.statusMessage() + dumpHeaders(res.headers());
@@ -124,8 +141,7 @@ shared void run() {
         void fail(Integer code, String msg) {
             value sres = sreq.response();
             sres.exceptionHandler((Throwable t) {
-                log.debug("``reqId`` Server response fail");
-                t.printStackTrace();
+                log.debug("``reqId`` Server response fail", t);
             });
             sres.setStatusCode(code);
             sres.setStatusMessage(msg);
@@ -135,27 +151,33 @@ shared void run() {
             fail(505, "Only HTTP/1.1 supported");
             return;
         }
-        value host = "localhost";
-        value port = 8090;
+        value sreqh = sreq.headers();
+        value origHost = sreqh.get("Host");
+        if (! exists origHost) {
+            fail(400, "Exhausted resources while trying to extract Host header from the request");
+            return;
+        }
+        value nextHop = resolveNextHop(origHost);
+        if (! exists nextHop) {
+            fail(400, "Destination unknown");
+            return;
+        }
         sreq.exceptionHandler((Throwable t) {
-            log.debug("``reqId`` Server request fail");
-            t.printStackTrace();
+            log.debug("``reqId`` Server request fail", t);
             fail(500, t.message);
         });
         value chost = sreq.localAddress().host();
         log.debug("``reqId`` Incoming request from : ``chost``:``dumpSReq(sreq)``");
-        value creq = client.request(sreq.method(), port, host, sreq.uri());
+        value creq = client.request(sreq.method(), nextHop.port, nextHop.host, sreq.uri());
         creq.handler((HttpClientResponse cres) {
             log.debug("``reqId`` Incoming response ``dumpCRes(cres)``");
             cres.exceptionHandler((Throwable t) {
-                log.debug("``reqId`` Client response fail");
-                t.printStackTrace();
+                log.debug("``reqId`` Client response fail", t);
                 fail(500, t.message);
             });
             value sres = sreq.response();
             sres.exceptionHandler((Throwable t) {
-                log.debug("``reqId`` Server response fail");
-                t.printStackTrace();
+                log.debug("``reqId`` Server response fail", t);
                 sres.end();
             });
 
@@ -181,17 +203,15 @@ shared void run() {
             log.debug("``reqId`` Response pumping started");
         });
         creq.exceptionHandler((Throwable t) {
-            log.debug("``reqId`` Client request fail");
-            t.printStackTrace();
+            log.debug("``reqId`` Client request fail", t);
             fail(503, t.message);
         });
-        value sreqh = sreq.headers();
         value creqh = creq.headers();
         copyEndToEndHeaders(sreqh, creqh);
-        if (exists origHost = sreqh.get("Host")) { creqh.set("X-Host", origHost); }
-        creqh.set("Host", host + ":" + port.string);
+        creqh.set("Host", nextHop.nextHost);
+        creqh.set("X-Host", origHost);
         creqh.set("X-Forwarded-For", chost);
-        log.debug("``reqId`` Outgoing request to: ``host``:``port``:``dumpCReq(creq)``");
+        log.debug("``reqId`` Outgoing request to: ``nextHop.host``:``nextHop.port``:``dumpCReq(creq)``");
         value reqPump = pump.pump(sreq, creq); // TODO dump contents
         sreq.endHandler(() {
             log.debug("``reqId`` Request pumping complete");
