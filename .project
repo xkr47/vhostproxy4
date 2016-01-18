@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>org.otherone.vhostproxy4</name>
+	<name>org.otherone.vhostproxy4-vertx</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -13,10 +13,6 @@
 		<buildCommand>
 			<name>com.redhat.ceylon.eclipse.ui.ceylonBuilder</name>
 			<arguments>
-				<dictionary>
-					<key>systemRepo</key>
-					<value></value>
-				</dictionary>
 			</arguments>
 		</buildCommand>
 	</buildSpec>
