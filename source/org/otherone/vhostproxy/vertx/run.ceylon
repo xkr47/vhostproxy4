@@ -1,7 +1,8 @@
 import io.vertx.ceylon.core { ... }
 import io.vertx.ceylon.core.http { ... }
 import io.vertx.ceylon.core.streams {
-    pump
+    ReadStream,
+    WriteStream
 }
 //import io.vertx.core.http { HttpHeaders { ... } }
 import ceylon.collection {
@@ -29,8 +30,30 @@ import io.vertx.core.http {
 import java.util.concurrent.locks {
     JReentrantLock = ReentrantLock
 }
+import io.vertx.core {
+    Handler
+}
+import io.vertx.ceylon.core.buffer {
+    Buffer
+}
 
 Logger log = logger(`package`);
+
+class MyPump<T>(String type, ReadStream<T> readStream, WriteStream<T> writeStream) given T satisfies Buffer {
+    void drainHandler() => readStream.resume();
+    void dataHandler(T? data) {
+        log.trace("``type`` (``data?.length() else 0`` bytes) '``data else "<null>"``'");
+        writeStream.write(data);
+        if (writeStream.writeQueueFull()) {
+            readStream.pause();
+            writeStream.drainHandler(drainHandler);
+        }
+    }
+    shared void start() {
+        readStream.handler(dataHandler);
+    }
+}
+
 
 Set<String> hopByHopHeaders = HashSet<String>{ elements = {
     Names.\iCONNECTION,
@@ -133,10 +156,22 @@ shared void run() {
 */
 
     // TODO timeouts
+    // TODO test responses without body e.g. 204
 
     value myVertx = vertx.vertx();
-    value client = myVertx.createHttpClient();
-    myVertx.createHttpServer().requestHandler((HttpServerRequest sreq) {
+    value client = myVertx.createHttpClient(HttpClientOptions{
+        connectTimeout = 10;
+        idleTimeout = 30;
+        maxPoolSize = 1000;
+        maxWaitQueueSize = 20;
+        tryUseCompression = false;
+    });
+    myVertx.createHttpServer(HttpServerOptions {
+        compressionSupported = true;
+        // handle100ContinueAutomatically = false;
+        reuseAddress = true;
+        idleTimeout = 5;
+    }).requestHandler((HttpServerRequest sreq) {
         value reqId = requestId.next();
         void fail(Integer code, String msg) {
             value sres = sreq.response();
@@ -194,7 +229,7 @@ shared void run() {
                 log.debug("``reqId`` Outgoing response2 ``dumpSRes(sres)``");
             });
 
-            value resPump = pump.pump(cres, sres);
+            value resPump = MyPump("Response body", cres, sres);
             cres.endHandler(() {
                 log.debug("``reqId`` Response pumping complete");
                 return sres.end();
@@ -212,7 +247,7 @@ shared void run() {
         creqh.set("X-Host", origHost);
         creqh.set("X-Forwarded-For", chost);
         log.debug("``reqId`` Outgoing request to: ``nextHop.host``:``nextHop.port``:``dumpCReq(creq)``");
-        value reqPump = pump.pump(sreq, creq); // TODO dump contents
+        value reqPump = MyPump("Request body", sreq, creq); // TODO dump contents
         sreq.endHandler(() {
             log.debug("``reqId`` Request pumping complete");
             return creq.end();
