@@ -101,7 +101,7 @@ class ProxyService(HttpClient client) {
         shared String matchHost,
         shared String host,
         shared Integer port,
-	shared String? pathPrefix = null,
+        shared String? pathPrefix = null,
         shared Boolean enabled = true,
         shared Boolean forceHttps = false,
         shared String[]? accessGroups = null,
@@ -144,7 +144,7 @@ class ProxyService(HttpClient client) {
 
     shared void requestHandler(HttpServerRequest sreq) {
         value reqId = requestId.next();
-        value chost = sreq.localAddress().host();
+        value chost = sreq.remoteAddress().host();
         log.debug("``reqId`` Incoming request from : ``chost``:``dumpSReq(sreq)``");
         void fail(Integer code, String msg) {
             value sres = sreq.response();
