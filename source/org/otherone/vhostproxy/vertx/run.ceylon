@@ -101,6 +101,7 @@ class ProxyService(HttpClient client) {
         shared String matchHost,
         shared String host,
         shared Integer port,
+	shared String? pathPrefix = null,
         shared Boolean enabled = true,
         shared Boolean forceHttps = false,
         shared String[]? accessGroups = null,
@@ -110,7 +111,7 @@ class ProxyService(HttpClient client) {
     [NextHop+] nextHops = [
     NextHop { matchHost = "outerspace.dyndns.org:8443"; host = "localhost"; port = 8090; nextHost = "simpura"; }
     ];
-    Map<String, NextHop> nextHopMap = HashMap<String, NextHop>{ entries = { for(i in nextHops) i.matchHost -> i }; };
+    Map<String, NextHop> nextHopMap = HashMap<String, NextHop>{ entries = { for(i in nextHops) if (i.enabled && i.accessGroups is Null) i.matchHost -> i }; };
     NextHop? resolveNextHop(String host) => nextHopMap.get(host);
 
     String dumpHeaders(MultiMap h) {
@@ -177,7 +178,8 @@ class ProxyService(HttpClient client) {
             log.debug("``reqId`` Server request fail", t);
             fail(500, t.message);
         });
-        value creq = client.request(sreq.method(), nextHop.port, nextHop.host, sreq.uri());
+        value curi = if (exists prefix = nextHop.pathPrefix) then prefix + sreq.uri() else sreq.uri();
+        value creq = client.request(sreq.method(), nextHop.port, nextHop.host, curi);
         creq.handler((HttpClientResponse cres) {
             log.debug("``reqId`` Incoming response ``dumpCRes(cres)``");
             cres.exceptionHandler((Throwable t) {
