@@ -152,6 +152,10 @@ class ProxyService(HttpClient client) {
             });
             sres.setStatusCode(code);
             sres.setStatusMessage(msg);
+            sres.headersEndHandler(() {
+                //headers.add(Names.\iTRANSFER_ENCODING, Values.\iCHUNKED);
+                log.debug("``reqId`` Outgoing response2 ``dumpSRes(sres)``");
+            });
             sres.end();
         }
         if (sreq.version() != http_1_1) {
