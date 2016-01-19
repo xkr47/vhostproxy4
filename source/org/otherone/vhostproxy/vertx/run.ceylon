@@ -36,6 +36,16 @@ import io.vertx.core {
 import io.vertx.ceylon.core.buffer {
     Buffer
 }
+import io.vertx.core.net.impl {
+    KeyStoreHelper
+}
+import io.vertx.ceylon.core.net {
+    JksOptions
+}
+import ceylon.file {
+    parsePath,
+    File
+}
 
 Logger log = logger(`package`);
 
@@ -54,124 +64,93 @@ class MyPump<T>(String type, ReadStream<T> readStream, WriteStream<T> writeStrea
     }
 }
 
-
-Set<String> hopByHopHeaders = HashSet<String>{ elements = {
-    Names.\iCONNECTION,
-    "Keep-Alive",
-    Names.\iPROXY_AUTHENTICATE,
-    Names.\iPROXY_AUTHORIZATION,
-    Names.\iTE,
-    Names.\iTRAILER,
-    Names.\iTRANSFER_ENCODING,
-    Names.\iUPGRADE
-};};
-
-Regex connectionHeaderValueRE = regex("""\s*,[\s,]*+"""); // from RFC2616
-
-void copyEndToEndHeaders(MultiMap from, MultiMap to) {
-    to.addAll(from);
-    for (name in hopByHopHeaders) {
-        to.remove(name);
-    }
-
-    value connectionHeader = from.get(Names.\iCONNECTION);
-    /*
-    Set<String> requestHopByHopHeaders = if (exists connectionHeader)
-    then HashSet<String>{ elements = connectionHeaderValueRE.split(connectionHeader.trimmed); }
-    else emptySet;
-    for (name in requestHopByHopHeaders) {
-        to.remove(name);
-    }
-     */
-    if (exists connectionHeader) {
-        for (name in connectionHeaderValueRE.split(connectionHeader.trimmed)) {
-            to.remove(name);
-        }
-    }
-}
-
-class NextHop(
-    shared String matchHost,
-    shared String host,
-    shared Integer port,
-    shared Boolean enabled = true,
-    shared Boolean forceHttps = false,
-    shared String[]? accessGroups = null,
-    shared String nextHost = host + ":" + port.string
-) {}
-
-[NextHop+] hops = [
-NextHop { matchHost = "kala"; host = "localhost"; port = 8090; nextHost = "simpura"; }
-];
-Map<String, NextHop> nextHopMap = HashMap<String, NextHop>{ entries = { for(i in hops) i.matchHost -> i }; };
-NextHop? resolveNextHop(String host) => nextHopMap.get(host);
-
-String dumpCReq(HttpClientRequest req) => "\n\t" + req.method().name + " " + req.uri() + dumpHeaders(req.headers());
-String dumpSReq(HttpServerRequest req) => "\n\t" + req.method().name + " " + req.uri() + dumpHeaders(req.headers());
-String dumpCRes(HttpClientResponse res) => "\n\t" + res.statusCode().string + " " + res.statusMessage() + dumpHeaders(res.headers());
-String dumpSRes(HttpServerResponse res) => "\n\t" + res.getStatusCode().string + " " + res.getStatusMessage() + dumpHeaders(res.headers());
-
-String dumpHeaders(MultiMap h) {
-    value sb = StringBuilder();
-    for (name in h.names()) {
-        sb.append("\n\t").append(name).append(": ").append(h.getAll(name).reduce((String partial, String element) => partial + "\n\t  " + element) else "");
-    }
-    return sb.string;
-}
-
 class ReentrantLock() satisfies Obtainable {
     JReentrantLock lock = JReentrantLock();
     shared actual void obtain() => lock.lockInterruptibly();
     shared actual void release(Throwable? error) => lock.unlock();
 }
 
-object requestId {
-    variable Integer prevRequestId = 0;
-    value requestIdLock = ReentrantLock();
-    shared Integer next() {
-        value now = system.milliseconds;
-        try (requestIdLock) {
-            if (now <= prevRequestId) {
-                return ++prevRequestId;
-            } else {
-                return prevRequestId = now;
+class ProxyService(HttpClient client) {
+    Set<String> hopByHopHeaders = HashSet<String>{ elements = {
+        Names.\iCONNECTION,
+        "Keep-Alive",
+        Names.\iPROXY_AUTHENTICATE,
+        Names.\iPROXY_AUTHORIZATION,
+        Names.\iTE,
+        Names.\iTRAILER,
+        Names.\iTRANSFER_ENCODING,
+        Names.\iUPGRADE
+    };};
+
+    Regex connectionHeaderValueRE = regex("""\s*,[\s,]*+"""); // from RFC2616
+
+    void copyEndToEndHeaders(MultiMap from, MultiMap to) {
+        to.addAll(from);
+        for (name in hopByHopHeaders) {
+            to.remove(name);
+        }
+
+        value connectionHeader = from.get(Names.\iCONNECTION);
+        /*
+         Set<String> requestHopByHopHeaders = if (exists connectionHeader)
+         then HashSet<String>{ elements = connectionHeaderValueRE.split(connectionHeader.trimmed); }
+         else emptySet;
+         for (name in requestHopByHopHeaders) {
+         to.remove(name);
+         }
+         */
+        if (exists connectionHeader) {
+            for (name in connectionHeaderValueRE.split(connectionHeader.trimmed)) {
+                to.remove(name);
             }
         }
     }
-}
 
-"Run the module `org.otherone.vhostproxy`."
-shared void run() {
-    addLogWriter(writeSimpleLog);
-    defaultPriority = trace;
-    log.info("Starting..");
+    class NextHop(
+        shared String matchHost,
+        shared String host,
+        shared Integer port,
+        shared Boolean enabled = true,
+        shared Boolean forceHttps = false,
+        shared String[]? accessGroups = null,
+        shared String nextHost = host + ":" + port.string
+    ) {}
 
-/*
-    MultiMap m = MultiMap(CaseInsensitiveHeaders());
-    m.add("Kala", "first");
-    m.add("Kala", "second");
-    m.add("Kala", "third");
-    log.info(m.getAll("Kala").string);
-    log.info(m.names());
-*/
+    [NextHop+] hops = [
+    NextHop { matchHost = "outerspace.dyndns.org:8443"; host = "localhost"; port = 8090; nextHost = "simpura"; }
+    ];
+    Map<String, NextHop> nextHopMap = HashMap<String, NextHop>{ entries = { for(i in hops) i.matchHost -> i }; };
+    NextHop? resolveNextHop(String host) => nextHopMap.get(host);
 
-    // TODO timeouts
-    // TODO test responses without body e.g. 204
+    String dumpHeaders(MultiMap h) {
+        value sb = StringBuilder();
+        for (name in h.names()) {
+            sb.append("\n\t").append(name).append(": ").append(h.getAll(name).reduce((String partial, String element) => partial + "\n\t  " + element) else "");
+        }
+        return sb.string;
+    }
 
-    value myVertx = vertx.vertx();
-    value client = myVertx.createHttpClient(HttpClientOptions{
-        connectTimeout = 10;
-        idleTimeout = 30;
-        maxPoolSize = 1000;
-        maxWaitQueueSize = 20;
-        tryUseCompression = false;
-    });
-    myVertx.createHttpServer(HttpServerOptions {
-        compressionSupported = true;
-        // handle100ContinueAutomatically = false;
-        reuseAddress = true;
-        idleTimeout = 5;
-    }).requestHandler((HttpServerRequest sreq) {
+    String dumpCReq(HttpClientRequest req) => "\n\t" + req.method().name + " " + req.uri() + dumpHeaders(req.headers());
+    String dumpSReq(HttpServerRequest req) => "\n\t" + req.method().name + " " + req.uri() + dumpHeaders(req.headers());
+    String dumpCRes(HttpClientResponse res) => "\n\t" + res.statusCode().string + " " + res.statusMessage() + dumpHeaders(res.headers());
+    String dumpSRes(HttpServerResponse res) => "\n\t" + res.getStatusCode().string + " " + res.getStatusMessage() + dumpHeaders(res.headers());
+
+    object requestId {
+        variable Integer prevRequestId = 0;
+        value requestIdLock = ReentrantLock();
+        shared Integer next() {
+            value now = system.milliseconds;
+            try (requestIdLock) {
+                if (now <= prevRequestId) {
+                    return ++prevRequestId;
+                } else {
+                    return prevRequestId = now;
+                }
+            }
+        }
+    }
+
+    shared void requestHandler(HttpServerRequest sreq) {
         value reqId = requestId.next();
         void fail(Integer code, String msg) {
             value sres = sreq.response();
@@ -194,7 +173,7 @@ shared void run() {
         }
         value nextHop = resolveNextHop(origHost);
         if (! exists nextHop) {
-            fail(400, "Destination unknown");
+            fail(400, "Destination ``origHost`` unknown");
             return;
         }
         sreq.exceptionHandler((Throwable t) {
@@ -255,6 +234,58 @@ shared void run() {
         reqPump.start();
         log.debug("``reqId`` Request pumping started");
     }
-    ).listen(8080);
-    log.info("Started");
+}
+
+"Run the module `org.otherone.vhostproxy`."
+shared void run() {
+    value baseport = 8080;
+
+    addLogWriter(writeSimpleLog);
+    defaultPriority = trace;
+    log.info("Starting..");
+
+/*
+    MultiMap m = MultiMap(CaseInsensitiveHeaders());
+    m.add("Kala", "first");
+    m.add("Kala", "second");
+    m.add("Kala", "third");
+    log.info(m.getAll("Kala").string);
+    log.info(m.names());
+*/
+
+    // TODO timeouts
+    // TODO test responses without body e.g. 204
+
+    value myVertx = vertx.vertx();
+    value client = myVertx.createHttpClient(HttpClientOptions{
+        connectTimeout = 10;
+        idleTimeout = 30;
+        maxPoolSize = 1000;
+        maxWaitQueueSize = 20;
+        tryUseCompression = false;
+    });
+    value proxyService = ProxyService(client);
+    myVertx.createHttpServer(HttpServerOptions {
+        compressionSupported = true;
+        // handle100ContinueAutomatically = false;
+        reuseAddress = true;
+        idleTimeout = 5;
+    }).requestHandler(proxyService.requestHandler).listen(baseport);
+    log.info("HTTP Started on http://localhost:``baseport``/");
+    String? keystorePassword;
+    "Password file not found" assert (is File keystorePasswordFile = parsePath("keystore-password").resource);
+    try (keystorePasswordFileReader = keystorePasswordFile.Reader("UTF-8")) {
+        keystorePassword = keystorePasswordFileReader.readLine();
+    }
+    assert (exists keystorePassword);
+    myVertx.createHttpServer(HttpServerOptions {
+        compressionSupported = true;
+        // handle100ContinueAutomatically = false;
+        reuseAddress = true;
+        idleTimeout = 5;
+        ssl = true;
+        keyStoreOptions = JksOptions { password = keystorePassword; path = "keystore";
+        };
+    }).requestHandler(proxyService.requestHandler).listen(baseport - 80 + 443);
+    log.info("HTTPS Started on https://localhost:``baseport - 80 + 443``/ . Startup complete.");
 }
