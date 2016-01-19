@@ -24,20 +24,11 @@ import ceylon.logging {
     defaultPriority,
     trace
 }
-import io.vertx.core.http {
-    CaseInsensitiveHeaders
-}
 import java.util.concurrent.locks {
     JReentrantLock = ReentrantLock
 }
-import io.vertx.core {
-    Handler
-}
 import io.vertx.ceylon.core.buffer {
     Buffer
-}
-import io.vertx.core.net.impl {
-    KeyStoreHelper
 }
 import io.vertx.ceylon.core.net {
     JksOptions
@@ -116,10 +107,10 @@ class ProxyService(HttpClient client) {
         shared String nextHost = host + ":" + port.string
     ) {}
 
-    [NextHop+] hops = [
+    [NextHop+] nextHops = [
     NextHop { matchHost = "outerspace.dyndns.org:8443"; host = "localhost"; port = 8090; nextHost = "simpura"; }
     ];
-    Map<String, NextHop> nextHopMap = HashMap<String, NextHop>{ entries = { for(i in hops) i.matchHost -> i }; };
+    Map<String, NextHop> nextHopMap = HashMap<String, NextHop>{ entries = { for(i in nextHops) i.matchHost -> i }; };
     NextHop? resolveNextHop(String host) => nextHopMap.get(host);
 
     String dumpHeaders(MultiMap h) {
@@ -244,15 +235,6 @@ shared void run() {
     defaultPriority = trace;
     log.info("Starting..");
 
-/*
-    MultiMap m = MultiMap(CaseInsensitiveHeaders());
-    m.add("Kala", "first");
-    m.add("Kala", "second");
-    m.add("Kala", "third");
-    log.info(m.getAll("Kala").string);
-    log.info(m.names());
-*/
-
     // TODO timeouts
     // TODO test responses without body e.g. 204
 
@@ -284,8 +266,7 @@ shared void run() {
         reuseAddress = true;
         idleTimeout = 5;
         ssl = true;
-        keyStoreOptions = JksOptions { password = keystorePassword; path = "keystore";
-        };
+        keyStoreOptions = JksOptions { password = keystorePassword; path = "keystore"; };
     }).requestHandler(proxyService.requestHandler).listen(baseport - 80 + 443);
     log.info("HTTPS Started on https://localhost:``baseport - 80 + 443``/ . Startup complete.");
 }
