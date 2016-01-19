@@ -143,6 +143,8 @@ class ProxyService(HttpClient client) {
 
     shared void requestHandler(HttpServerRequest sreq) {
         value reqId = requestId.next();
+        value chost = sreq.localAddress().host();
+        log.debug("``reqId`` Incoming request from : ``chost``:``dumpSReq(sreq)``");
         void fail(Integer code, String msg) {
             value sres = sreq.response();
             sres.exceptionHandler((Throwable t) {
@@ -171,8 +173,6 @@ class ProxyService(HttpClient client) {
             log.debug("``reqId`` Server request fail", t);
             fail(500, t.message);
         });
-        value chost = sreq.localAddress().host();
-        log.debug("``reqId`` Incoming request from : ``chost``:``dumpSReq(sreq)``");
         value creq = client.request(sreq.method(), nextHop.port, nextHop.host, sreq.uri());
         creq.handler((HttpClientResponse cres) {
             log.debug("``reqId`` Incoming response ``dumpCRes(cres)``");
@@ -241,17 +241,18 @@ shared void run() {
     value myVertx = vertx.vertx();
     value client = myVertx.createHttpClient(HttpClientOptions{
         connectTimeout = 10;
-        idleTimeout = 30;
+        idleTimeout = 120;
         maxPoolSize = 1000;
         maxWaitQueueSize = 20;
         tryUseCompression = false;
     });
     value proxyService = ProxyService(client);
+    value serverIdleTimeout = 60;
     myVertx.createHttpServer(HttpServerOptions {
         compressionSupported = true;
         // handle100ContinueAutomatically = false;
         reuseAddress = true;
-        idleTimeout = 5;
+        idleTimeout = serverIdleTimeout;
     }).requestHandler(proxyService.requestHandler).listen(baseport);
     log.info("HTTP Started on http://localhost:``baseport``/");
     String? keystorePassword;
@@ -259,12 +260,12 @@ shared void run() {
     try (keystorePasswordFileReader = keystorePasswordFile.Reader("UTF-8")) {
         keystorePassword = keystorePasswordFileReader.readLine();
     }
-    assert (exists keystorePassword);
+    "Password file was empty" assert (exists keystorePassword);
     myVertx.createHttpServer(HttpServerOptions {
         compressionSupported = true;
         // handle100ContinueAutomatically = false;
         reuseAddress = true;
-        idleTimeout = 5;
+        idleTimeout = serverIdleTimeout;
         ssl = true;
         keyStoreOptions = JksOptions { password = keystorePassword; path = "keystore"; };
     }).requestHandler(proxyService.requestHandler).listen(baseport - 80 + 443);
