@@ -99,7 +99,7 @@ object logFiles {
         if (exists log) {
             return log;
         }
-        value logFile = logBase + ".log";
+        value logFile = "logs/``logBase``";
         value log2 = myVertx.fileSystem().openBlocking(logFile, OpenOptions { create = true; read = false; write = true; truncateExisting = false; });
         value logProps = myVertx.fileSystem().propsBlocking(logFile);
         log2.setWritePos(logProps.size());
