@@ -173,7 +173,7 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
     }
 
     String dumpCReq(HttpClientRequest req) => "\n" + req.method().name + " " + req.uri() + dumpHeaders(req.headers(), "");
-    String dumpSReq(HttpServerRequest req, String indent) => "\n" + indent + req.method().name + " " + req.uri() + dumpHeaders(req.headers(), indent);
+    String dumpSReq(HttpServerRequest req, String indent) => "\n" + indent + req.method().name + " " + req.uri() + " " + req.version().name + dumpHeaders(req.headers(), indent);
     String dumpCRes(HttpClientResponse res) => "\n" + res.statusCode().string + " " + res.statusMessage() + dumpHeaders(res.headers(), "");
     String dumpSRes(HttpServerResponse res) => "\n" + res.getStatusCode().string + " " + res.getStatusMessage() + dumpHeaders(res.headers(), "");
 
