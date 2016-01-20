@@ -19,8 +19,8 @@ class NextHop (
 ) {}
 
 [NextHop+] nextHops = [
-NextHop { matchHost = "localhost:8080"; host = "localhost"; port = 8090; nextHost = "simpuraSsl"; pathPrefix = "/lolssl"; },
-NextHop { matchHost = "localhost:8443"; host = "localhost"; port = 8090; nextHost = "simpura"; pathPrefix = "/lol"; }
+NextHop { matchHost = "localhost:8080"; host = "localhost"; port = 8090; nextHost = "simpura"; pathPrefix = "/lol"; },
+NextHop { matchHost = "localhost:8443"; host = "localhost"; port = 8090; nextHost = "simpuraSsl"; pathPrefix = "/lolssl"; }
 ];
 
 Map<String, NextHop> nextHopMap = HashMap<String, NextHop>{ entries = { for(i in nextHops) if (i.enabled && i.accessGroups is Null) i.matchHost -> i }; };
