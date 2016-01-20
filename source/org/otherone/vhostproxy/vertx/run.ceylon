@@ -208,7 +208,8 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
             }
         }
         value chost = sreq.remoteAddress().host();
-        log.trace("``reqId`` Incoming request from ``chost``:``dumpSReq(sreq, "\t")``");
+        value reqLogInfix = "Incoming ``isTls then "HTTPS " else ""``request from ``chost``:";
+        log.trace("``reqId`` ``reqLogInfix````dumpSReq(sreq, "\t")``");
 
         // NOTE: this handler is replaced later
         sreq.endHandler(() {
@@ -244,7 +245,7 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
             return;
         }
         value logFile2 = logFile = logFiles.get(nextHop.logBase, myVertx);
-        trace(LogType.sreq, "Incoming request from ``chost``:``dumpSReq(sreq, "")``");
+        trace(LogType.sreq, "``reqLogInfix````dumpSReq(sreq, "")``");
 
         value sreqh = sreq.headers();
         value origHost = sreqh.get("Host");
