@@ -235,10 +235,10 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
             trace(LogType.sreq, "Incoming request fail", t);
             fail(500, t.message);
         });
-        if (sreq.version() != http_1_1) {
+/*        if (sreq.version() != http_1_1) {
             fail(505, "Only HTTP/1.1 supported");
             return;
-        }
+        }*/
         value nextHop = resolveNextHop(sreq, isTls);
         if (! exists nextHop) {
             // in this case the resolveNextHop takes care of sending the response
