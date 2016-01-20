@@ -40,14 +40,14 @@ import ceylon.file {
 
 Logger log = logger(`package`);
 
-class MyPump<T>(String type, ReadStream<T> readStream, WriteStream<T> writeStream) given T satisfies Buffer {
-    void drainHandler() => readStream.resume();
+class MyPump<T>(Anything(String, Throwable?=) trace, String type, ReadStream<T> readStream, WriteStream<T> writeStream, Anything()? firstBufferWrittenHandler = null) given T satisfies Buffer {
     void dataHandler(T? data) {
-        log.trace("``type`` (``data?.length() else 0`` bytes) '``data else "<null>"``'");
+        trace("``type`` (``data?.length() else 0`` bytes) '``data else "<null>"``'");
+        if (exists firstBufferWrittenHandler) { firstBufferWrittenHandler(); }
         writeStream.write(data);
         if (writeStream.writeQueueFull()) {
             readStream.pause();
-            writeStream.drainHandler(drainHandler);
+            writeStream.drainHandler(readStream.resume);
         }
     }
     shared void start() {
@@ -60,6 +60,17 @@ class ReentrantLock() satisfies Obtainable {
     shared actual void obtain() => lock.lockInterruptibly();
     shared actual void release(Throwable? error) => lock.unlock();
 }
+
+shared class NextHop(
+    shared String matchHost,
+    shared String host,
+    shared Integer port,
+    shared String? pathPrefix = null,
+    shared Boolean enabled = true,
+    shared Boolean forceHttps = false,
+    shared String[]? accessGroups = null,
+    shared String nextHost = host + ":" + port.string
+) {}
 
 class ProxyService(HttpClient client) {
     Set<String> hopByHopHeaders = HashSet<String>{ elements = {
@@ -96,23 +107,6 @@ class ProxyService(HttpClient client) {
             }
         }
     }
-
-    class NextHop(
-        shared String matchHost,
-        shared String host,
-        shared Integer port,
-        shared String? pathPrefix = null,
-        shared Boolean enabled = true,
-        shared Boolean forceHttps = false,
-        shared String[]? accessGroups = null,
-        shared String nextHost = host + ":" + port.string
-    ) {}
-
-    [NextHop+] nextHops = [
-    NextHop { matchHost = "outerspace.dyndns.org:8443"; host = "localhost"; port = 8090; nextHost = "simpura"; }
-    ];
-    Map<String, NextHop> nextHopMap = HashMap<String, NextHop>{ entries = { for(i in nextHops) if (i.enabled && i.accessGroups is Null) i.matchHost -> i }; };
-    NextHop? resolveNextHop(String host) => nextHopMap.get(host);
 
     String dumpHeaders(MultiMap h) {
         value sb = StringBuilder();
@@ -163,15 +157,15 @@ class ProxyService(HttpClient client) {
             fail(505, "Only HTTP/1.1 supported");
             return;
         }
+        value nextHop = resolveNextHop(sreq);
+        if (! exists nextHop) {
+            // in this case the resolveNextHop takes care of sending the response
+            return;
+        }
         value sreqh = sreq.headers();
         value origHost = sreqh.get("Host");
         if (! exists origHost) {
             fail(400, "Exhausted resources while trying to extract Host header from the request");
-            return;
-        }
-        value nextHop = resolveNextHop(origHost);
-        if (! exists nextHop) {
-            fail(400, "Destination ``origHost`` unknown");
             return;
         }
         sreq.exceptionHandler((Throwable t) {
