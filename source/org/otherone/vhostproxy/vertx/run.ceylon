@@ -68,7 +68,7 @@ class Target (
     shared String hostHeader
 ){}
 
-class ProxyService(HttpClient client) {
+class ProxyService(HttpClient client, Boolean isTls) {
     Set<String> hopByHopHeaders = HashSet<String>{ elements = {
         Names.\iCONNECTION,
         "Keep-Alive",
@@ -166,7 +166,7 @@ class ProxyService(HttpClient client) {
             fail(505, "Only HTTP/1.1 supported");
             return;
         }
-        value nextHop = resolveNextHop(sreq);
+        value nextHop = resolveNextHop(sreq, isTls);
         if (! exists nextHop) {
             // in this case the resolveNextHop takes care of sending the response
             return;
@@ -253,14 +253,13 @@ shared void run() {
         maxWaitQueueSize = 20;
         tryUseCompression = false;
     });
-    value proxyService = ProxyService(client);
     value serverIdleTimeout = 60;
     myVertx.createHttpServer(HttpServerOptions {
         compressionSupported = true;
         // handle100ContinueAutomatically = false;
         reuseAddress = true;
         idleTimeout = serverIdleTimeout;
-    }).requestHandler(proxyService.requestHandler).listen(baseport);
+    }).requestHandler(ProxyService(client, false).requestHandler).listen(baseport);
     log.info("HTTP Started on http://localhost:``baseport``/");
     String? keystorePassword;
     "Password file not found" assert (is File keystorePasswordFile = parsePath("keystore-password").resource);
@@ -275,6 +274,6 @@ shared void run() {
         idleTimeout = serverIdleTimeout;
         ssl = true;
         keyStoreOptions = JksOptions { password = keystorePassword; path = "keystore"; };
-    }).requestHandler(proxyService.requestHandler).listen(baseport - 80 + 443);
+    }).requestHandler(ProxyService(client, true).requestHandler).listen(baseport - 80 + 443);
     log.info("HTTPS Started on https://localhost:``baseport - 80 + 443``/ . Startup complete.");
 }

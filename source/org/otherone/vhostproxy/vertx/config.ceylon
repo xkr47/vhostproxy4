@@ -26,7 +26,7 @@ NextHop { matchHost = "localhost:8443"; host = "localhost"; port = 8090; nextHos
 Map<String, NextHop> nextHopMap = HashMap<String, NextHop>{ entries = { for(i in nextHops) if (i.enabled && i.accessGroups is Null) i.matchHost -> i }; };
 
 "Resolve the next hop for this request. If no next hop found, the response must be taken care of and null returned."
-Target? resolveNextHop(HttpServerRequest sreq) {
+Target? resolveNextHop(HttpServerRequest sreq, Boolean isTls) {
     if (sreq.method() == connect) {
         value sres = sreq.response();
         sres.setStatusCode(400); // TODO status code
