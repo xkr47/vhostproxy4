@@ -138,21 +138,34 @@ class ProxyService(HttpClient client) {
 
     shared void requestHandler(HttpServerRequest sreq) {
         value reqId = requestId.next();
+        void trace(String msg, Throwable? t = null) => log.trace("``reqId`` ``msg``", t);
         value chost = sreq.remoteAddress().host();
-        log.debug("``reqId`` Incoming request from : ``chost``:``dumpSReq(sreq)``");
+        trace("Incoming request from ``chost``:``dumpSReq(sreq)``");
+
+        // NOTE: this handler is replaced later
+        sreq.endHandler(() {
+            trace("Incoming request complete");
+        });
+        value sres = sreq.response();
+        sres.exceptionHandler((Throwable t) {
+            trace("Outgoing response fail", t);
+        });
+        sres.headersEndHandler(() {
+            trace("Outgoing response final ``dumpSRes(sres)``");
+        });
+        sres.bodyEndHandler(() {
+            trace("Outgoing response complete");
+        });
+
         void fail(Integer code, String msg) {
-            value sres = sreq.response();
-            sres.exceptionHandler((Throwable t) {
-                log.debug("``reqId`` Server response fail", t);
-            });
             sres.setStatusCode(code);
             sres.setStatusMessage(msg);
-            sres.headersEndHandler(() {
-                //headers.add(Names.\iTRANSFER_ENCODING, Values.\iCHUNKED);
-                log.debug("``reqId`` Outgoing response2 ``dumpSRes(sres)``");
-            });
             sres.end();
         }
+        sreq.exceptionHandler((Throwable t) {
+            trace("Incoming request fail", t);
+            fail(500, t.message);
+        });
         if (sreq.version() != http_1_1) {
             fail(505, "Only HTTP/1.1 supported");
             return;
@@ -168,22 +181,13 @@ class ProxyService(HttpClient client) {
             fail(400, "Exhausted resources while trying to extract Host header from the request");
             return;
         }
-        sreq.exceptionHandler((Throwable t) {
-            log.debug("``reqId`` Server request fail", t);
-            fail(500, t.message);
-        });
         value curi = if (exists prefix = nextHop.pathPrefix) then prefix + sreq.uri() else sreq.uri();
         value creq = client.request(sreq.method(), nextHop.port, nextHop.host, curi);
         creq.handler((HttpClientResponse cres) {
-            log.debug("``reqId`` Incoming response ``dumpCRes(cres)``");
+            trace("Incoming response ``dumpCRes(cres)``");
             cres.exceptionHandler((Throwable t) {
-                log.debug("``reqId`` Client response fail", t);
+                trace("Incoming response fail", t);
                 fail(500, t.message);
-            });
-            value sres = sreq.response();
-            sres.exceptionHandler((Throwable t) {
-                log.debug("``reqId`` Server response fail", t);
-                sres.end();
             });
 
             sres.setStatusCode(cres.statusCode());
@@ -193,22 +197,18 @@ class ProxyService(HttpClient client) {
             if (!headers.contains(Names.\iCONTENT_LENGTH)) {
                 sres.setChunked(true);
             }
-            log.debug("``reqId`` Outgoing response1 ``dumpSRes(sres)``");
-            sres.headersEndHandler(() {
-                //headers.add(Names.\iTRANSFER_ENCODING, Values.\iCHUNKED);
-                log.debug("``reqId`` Outgoing response2 ``dumpSRes(sres)``");
-            });
+            trace("Outgoing response initial ``dumpSRes(sres)``");
 
-            value resPump = MyPump("Response body", cres, sres);
+            value resPump = MyPump(trace, "Response body", cres, sres);
             cres.endHandler(() {
-                log.debug("``reqId`` Response pumping complete");
+                trace("Incoming response complete");
                 return sres.end();
             });
             resPump.start();
-            log.debug("``reqId`` Response pumping started");
+            trace("Incoming response body");
         });
         creq.exceptionHandler((Throwable t) {
-            log.debug("``reqId`` Client request fail", t);
+            trace("Outgoing request fail", t);
             fail(503, t.message);
         });
         value creqh = creq.headers();
@@ -216,14 +216,26 @@ class ProxyService(HttpClient client) {
         creqh.set("Host", nextHop.nextHost);
         creqh.set("X-Host", origHost);
         creqh.set("X-Forwarded-For", chost);
-        log.debug("``reqId`` Outgoing request to: ``nextHop.host``:``nextHop.port``:``dumpCReq(creq)``");
-        value reqPump = MyPump("Request body", sreq, creq); // TODO dump contents
+        value transferEncoding = sreqh.get(Names.\iTRANSFER_ENCODING);
+        if (exists transferEncoding, transferEncoding.contains("chunked")) {
+            creq.setChunked(true);
+        }
+        trace("Outgoing request (initial) to ``nextHop.host``:``nextHop.port``:``dumpCReq(creq)``");
+        variable value finalRequestDumped = false;
+        void dumpFinalRequest() {
+            if (!finalRequestDumped) {
+                finalRequestDumped = true;
+                trace("Outgoing request final:``dumpCReq(creq)``");
+            }
+        }
+        value reqPump = MyPump(trace, "Request body", sreq, creq, dumpFinalRequest); // TODO dump contents
         sreq.endHandler(() {
-            log.debug("``reqId`` Request pumping complete");
-            return creq.end();
+            creq.end();
+            dumpFinalRequest();
+            trace("Incoming request complete");
         });
+        trace("Incoming request body");
         reqPump.start();
-        log.debug("``reqId`` Request pumping started");
     }
 }
 
