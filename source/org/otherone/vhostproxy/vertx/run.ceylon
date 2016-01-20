@@ -61,16 +61,12 @@ class ReentrantLock() satisfies Obtainable {
     shared actual void release(Throwable? error) => lock.unlock();
 }
 
-shared class NextHop(
-    shared String matchHost,
-    shared String host,
-    shared Integer port,
-    shared String? pathPrefix = null,
-    shared Boolean enabled = true,
-    shared Boolean forceHttps = false,
-    shared String[]? accessGroups = null,
-    shared String nextHost = host + ":" + port.string
-) {}
+class Target (
+    shared String socketHost,
+    shared Integer socketPort,
+    shared String uri,
+    shared String hostHeader
+){}
 
 class ProxyService(HttpClient client) {
     Set<String> hopByHopHeaders = HashSet<String>{ elements = {
@@ -181,8 +177,7 @@ class ProxyService(HttpClient client) {
             fail(400, "Exhausted resources while trying to extract Host header from the request");
             return;
         }
-        value curi = if (exists prefix = nextHop.pathPrefix) then prefix + sreq.uri() else sreq.uri();
-        value creq = client.request(sreq.method(), nextHop.port, nextHop.host, curi);
+        value creq = client.request(sreq.method(), nextHop.socketPort, nextHop.socketHost, nextHop.uri);
         creq.handler((HttpClientResponse cres) {
             trace("Incoming response ``dumpCRes(cres)``");
             cres.exceptionHandler((Throwable t) {
@@ -213,14 +208,14 @@ class ProxyService(HttpClient client) {
         });
         value creqh = creq.headers();
         copyEndToEndHeaders(sreqh, creqh);
-        creqh.set("Host", nextHop.nextHost);
+        creqh.set("Host", nextHop.hostHeader);
         creqh.set("X-Host", origHost);
         creqh.set("X-Forwarded-For", chost);
         value transferEncoding = sreqh.get(Names.\iTRANSFER_ENCODING);
         if (exists transferEncoding, transferEncoding.contains("chunked")) {
             creq.setChunked(true);
         }
-        trace("Outgoing request (initial) to ``nextHop.host``:``nextHop.port``:``dumpCReq(creq)``");
+        trace("Outgoing request (initial) to ``nextHop.socketHost``:``nextHop.socketPort``:``dumpCReq(creq)``");
         variable value finalRequestDumped = false;
         void dumpFinalRequest() {
             if (!finalRequestDumped) {

@@ -1,11 +1,22 @@
-import io.vertx.ceylon.core.http {
-    HttpServerRequest,
-    HttpMethod,
-    connect
-}
 import ceylon.collection {
     HashMap
 }
+
+import io.vertx.ceylon.core.http {
+    HttpServerRequest,
+    connect
+}
+
+class NextHop (
+    shared String matchHost,
+    shared String host,
+    shared Integer port,
+    shared String? pathPrefix = null,
+    shared Boolean enabled = true,
+    shared Boolean forceHttps = false,
+    shared String[]? accessGroups = null,
+    shared String nextHost = host + ":" + port.string
+) {}
 
 [NextHop+] nextHops = [
 NextHop { matchHost = "localhost:8080"; host = "localhost"; port = 8090; nextHost = "simpuraSsl"; pathPrefix = "/lolssl"; },
@@ -15,7 +26,7 @@ NextHop { matchHost = "localhost:8443"; host = "localhost"; port = 8090; nextHos
 Map<String, NextHop> nextHopMap = HashMap<String, NextHop>{ entries = { for(i in nextHops) if (i.enabled && i.accessGroups is Null) i.matchHost -> i }; };
 
 "Resolve the next hop for this request. If no next hop found, the response must be taken care of and null returned."
-NextHop? resolveNextHop(HttpServerRequest sreq) {
+Target? resolveNextHop(HttpServerRequest sreq) {
     if (sreq.method() == connect) {
         value sres = sreq.response();
         sres.setStatusCode(400); // TODO status code
@@ -32,11 +43,13 @@ NextHop? resolveNextHop(HttpServerRequest sreq) {
         return null;
     }
     value nextHop = nextHopMap.get(host);
-    if (!nextHop exists) {
+    if (!exists nextHop) {
         value sres = sreq.response();
         sres.setStatusCode(400);
         sres.setStatusMessage("No service defined for ``host``");
         sres.end();
+        return null;
     }
-    return nextHop;
+    value uri = if (exists prefix = nextHop.pathPrefix) then prefix + sreq.uri() else sreq.uri();
+    return Target(nextHop.host, nextHop.port, uri, nextHop.nextHost);
 }
