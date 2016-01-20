@@ -15,7 +15,7 @@ class NextHop (
     shared Boolean enabled = true,
     shared Boolean forceHttps = false,
     shared String[]? accessGroups = null,
-    shared String nextHost = host + ":" + port.string
+    shared String nextHost = port == 80 then host else host + ":" + port.string
 ) {}
 
 [NextHop+] nextHops = [
@@ -51,5 +51,8 @@ Target? resolveNextHop(HttpServerRequest sreq, Boolean isTls) {
         return null;
     }
     value uri = if (exists prefix = nextHop.pathPrefix) then prefix + sreq.uri() else sreq.uri();
-    return Target(nextHop.host, nextHop.port, uri, nextHop.nextHost);
+    value nextHost = nextHop.nextHost;
+    value colonIdx = nextHost.firstIndexWhere((ch) => ch == ':');
+    value logBase = if (exists colonIdx) then nextHost.initial(colonIdx) else nextHost;
+    return Target(nextHop.host, nextHop.port, uri, nextHost, logBase);
 }
