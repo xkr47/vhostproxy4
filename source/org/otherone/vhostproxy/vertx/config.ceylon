@@ -29,7 +29,7 @@ Map<String, NextHop> nextHopMap = HashMap<String, NextHop>{ entries = { for(i in
 Target? resolveNextHop(HttpServerRequest sreq, Boolean isTls) {
     if (sreq.method() == connect) {
         value sres = sreq.response();
-        sres.setStatusCode(400); // TODO status code
+        sres.setStatusCode(405);
         sres.setStatusMessage("Method not supported");
         sres.end();
         return null;
@@ -45,7 +45,7 @@ Target? resolveNextHop(HttpServerRequest sreq, Boolean isTls) {
     value nextHop = nextHopMap.get(host);
     if (!exists nextHop) {
         value sres = sreq.response();
-        sres.setStatusCode(400);
+        sres.setStatusCode(404);
         sres.setStatusMessage("No service defined for ``host``");
         sres.end();
         return null;

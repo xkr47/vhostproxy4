@@ -258,7 +258,7 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
             trace(LogType.creq, "Incoming response ``dumpCRes(cres)``");
             cres.exceptionHandler((Throwable t) {
                 trace(LogType.cres, "Incoming response fail", t);
-                fail(500, t.message);
+                fail(502, t.message);
             });
 
             sres.setStatusCode(cres.statusCode());
@@ -280,7 +280,7 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
         });
         creq.exceptionHandler((Throwable t) {
             trace(LogType.creq, "Outgoing request fail", t);
-            fail(503, t.message);
+            fail(502, t.message);
         });
         value creqh = creq.headers();
         copyEndToEndHeaders(sreqh, creqh);
