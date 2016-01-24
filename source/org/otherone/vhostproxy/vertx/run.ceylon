@@ -312,8 +312,6 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
 
 "Run the module `org.otherone.vhostproxy`."
 shared void run() {
-    value baseport = 8080;
-
     addLogWriter(writeSimpleLog);
     defaultPriority = trace;
     log.info("Starting..");
@@ -335,8 +333,8 @@ shared void run() {
         // handle100ContinueAutomatically = false;
         reuseAddress = true;
         idleTimeout = serverIdleTimeout;
-    }).requestHandler(ProxyService(client, false, myVertx).requestHandler).listen(baseport);
-    log.info("HTTP Started on http://localhost:``baseport``/");
+    }).requestHandler(ProxyService(client, false, myVertx).requestHandler).listen(portConfig.listenHttpPort);
+    log.info("HTTP Started on port ``portConfig.listenHttpPort``, sample public url: http://localhost:``portConfig.publicHttpPort``/");
     String? keystorePassword;
     "Password file not found" assert (is File keystorePasswordFile = parsePath("keystore-password").resource);
     try (keystorePasswordFileReader = keystorePasswordFile.Reader("UTF-8")) {
@@ -350,6 +348,6 @@ shared void run() {
         idleTimeout = serverIdleTimeout;
         ssl = true;
         keyStoreOptions = JksOptions { password = keystorePassword; path = "keystore"; };
-    }).requestHandler(ProxyService(client, true, myVertx).requestHandler).listen(baseport - 80 + 443);
-    log.info("HTTPS Started on https://localhost:``baseport - 80 + 443``/ . Startup complete.");
+    }).requestHandler(ProxyService(client, true, myVertx).requestHandler).listen(portConfig.listenHttpsPort);
+    log.info("HTTPS Started on port ``portConfig.listenHttpsPort``, sample public url: https://localhost:``portConfig.publicHttpsPort``/ . Startup complete.");
 }
