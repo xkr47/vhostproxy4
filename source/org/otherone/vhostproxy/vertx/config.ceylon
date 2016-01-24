@@ -1,6 +1,16 @@
 import ceylon.collection {
     HashMap
 }
+import ceylon.file {
+    parsePath,
+    File
+}
+import ceylon.io.base64 {
+    decode
+}
+import ceylon.io.buffer {
+    newByteBufferWithData
+}
 
 import io.netty.handler.codec.http {
     HttpHeaders {
@@ -34,7 +44,9 @@ class NextHop (
     shared Boolean enabled = true,
     shared Boolean forceHttps = false,
     shared String[]? accessGroups = null,
-    shared String nextHost = port == 80 then host else host + ":" + port.string
+    shared String nextHost = port == 80 then host else host + ":" + port.string,
+    shared String? passwordFile = null,
+    shared Boolean propagatePassword = false // only has effect if passwordFile is non-null
 ) {}
 
 "List of next hops which are chosen based on matchHost. These are just examples which forward requests to localhost:8090 with some additional adjustments."
@@ -51,6 +63,10 @@ Null reject(HttpServerRequest sreq, Integer status, String statusMsg) {
     sres.setStatusMessage(statusMsg);
     sres.end();
     return null;
+}
+
+String decodeBase64(String s) {
+    return String(decode(newByteBufferWithData(*(s.map((ch) => ch.integer.byte)))).map((Byte b) => b.unsigned.character));
 }
 
 String extractHosname(String hostHeader) {
@@ -105,6 +121,36 @@ Target? resolveNextHop(HttpServerRequest sreq, Boolean isTls) {
         }
         sres.end();
         return null;
+    }
+    if (exists pf = nextHop.passwordFile) {
+        variable value passwordOk = false;
+        value authHeader = sreq.headers().get(Names.\iAUTHORIZATION);
+        if (exists authHeader, authHeader.startsWith("Basic ")) {
+            value userPass = decodeBase64(authHeader[6...]);
+            if (is File file = parsePath(pf).resource) {
+                try (reader = file.Reader()) {
+                    while (exists line = reader.readLine()) {
+                        if (line.trimmed.size >= 3, exists firstCh = line.first, firstCh != '#') {
+                            if (userPass == line) {
+                                passwordOk = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (!passwordOk) {
+            value sres = sreq.response();
+            sres.setStatusCode(401);
+            sres.setStatusMessage("Authorization required for ``hostname``");
+            sres.headers().add(Names.\iWWW_AUTHENTICATE, "Basic realm=\"``hostname``\"");
+            sres.end();
+            return null;
+        }
+        if (!nextHop.propagatePassword) {
+            sreq.headers().remove(Names.\iAUTHORIZATION);
+        }
     }
     value nextUri = if (exists prefix = nextHop.pathPrefix) then prefix + sreq.uri() else sreq.uri();
     value logBase = hostname;
