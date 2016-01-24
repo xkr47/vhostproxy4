@@ -53,27 +53,31 @@ import java.util.concurrent.locks {
 
 Logger log = logger(`package`);
 
+ReentrantLock logLock = ReentrantLock();
+
 class MyPump<T>(AsyncFile logFile, String reqId, LogType logType, String type, ReadStream<T> readStream, WriteStream<T> writeStream, Anything()? firstBufferWrittenHandler = null) given T satisfies Buffer {
     void dataHandler(T? data) {
         writeStream.write(data);
         if (exists firstBufferWrittenHandler) { firstBufferWrittenHandler(); }
 
-        if (exists data) {
-            logFile.write(buffer.buffer("``reqId`` ``logType.str`` ``system.milliseconds`` ``data.length()`` bytes:\n", "UTF-8"));
-            value prefix = "``reqId`` ``LogType.none.str`` ";
-            variable value start = 0;
-            for (i in 0:data.length()) {
-                if (data.getUnsignedByte(i) == '\n'.integer.byte) {
-                    logFile.write(buffer.buffer(prefix, "UTF-8"));
-                    logFile.write(data.slice(start, i + 1));
-                    start = i+1;
+        try (logLock) {
+            if (exists data) {
+                logFile.write(buffer.buffer("``reqId`` ``logType.str`` ``system.milliseconds`` ``data.length()`` bytes:\n", "UTF-8"));
+                value prefix = "``reqId`` ``LogType.none.str`` ";
+                variable value start = 0;
+                for (i in 0:data.length()) {
+                    if (data.getUnsignedByte(i) == '\n'.integer.byte) {
+                        logFile.write(buffer.buffer(prefix, "UTF-8"));
+                        logFile.write(data.slice(start, i + 1));
+                        start = i+1;
+                    }
                 }
+                logFile.write(buffer.buffer(prefix, "UTF-8"));
+                logFile.write(data.slice(start, data.length()));
+                logFile.write(buffer.buffer("\n", "UTF-8"));
+            } else {
+                logFile.write(buffer.buffer("``reqId`` ``logType.str`` ``system.milliseconds``` null buffer\n", "UTF-8"));
             }
-            logFile.write(buffer.buffer(prefix, "UTF-8"));
-            logFile.write(data.slice(start, data.length()));
-            logFile.write(buffer.buffer("\n", "UTF-8"));
-        } else {
-            logFile.write(buffer.buffer("``reqId`` ``logType.str`` ``system.milliseconds``` null buffer\n", "UTF-8"));
         }
 
         if (writeStream.writeQueueFull()) {
@@ -202,7 +206,9 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
         void trace(LogType logType, String msg, Throwable? t = null) {
             if (exists f = logFile) {
                 value infix = "\n" + reqId + " " + LogType.none.str + " ";
-                f.write(buffer.buffer(reqId + " " + logType.str + " " + system.milliseconds.string + " " + msg.split((ch) => ch == '\n').reduce((String a,n) => a + infix+ n) + "\n", "UTF-8"));
+                try (logLock) {
+                    f.write(buffer.buffer(reqId + " " + logType.str + " " + system.milliseconds.string + " " + msg.split((ch) => ch == '\n').reduce((String a,n) => a + infix+ n) + "\n", "UTF-8"));
+                }
             } else {
                 log.trace("``reqId`` ``msg``", t);
             }
