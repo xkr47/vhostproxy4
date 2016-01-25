@@ -1,5 +1,9 @@
 /.exploded/
 /classes/
-modules
-.classpath
+/modules
+/.classpath
 *~
+/accessGroups.txt
+/logs
+/keystore
+/keystore-password
