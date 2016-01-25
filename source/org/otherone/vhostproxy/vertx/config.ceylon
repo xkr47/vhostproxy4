@@ -1,5 +1,6 @@
 import ceylon.collection {
-    HashMap
+    HashMap,
+    HashSet
 }
 import ceylon.file {
     parsePath,
@@ -36,6 +37,9 @@ shared object portConfig {
     shared Integer publicHttpsPort = listenHttpsPort;
 }
 
+"A file containing 'group:commaSeparatedListOfIps'. Example: 'home:192.168.1.2,127.0.0.1'. IPv6 addresses also allowed."
+String accessGroupFilename = "accessGroups.txt";
+
 class NextHop (
     "When the hostname part of the 'Host' header matches, this entry will be used as next hop."
     shared String matchHost,
@@ -49,6 +53,7 @@ class NextHop (
     shared Boolean enabled = true,
     "If true, users entering using HTTP will be redirected to the HTTPS service. If false the user can access the service both with HTTP and HTTPS."
     shared Boolean forceHttps = false,
+    "If non-null, it's a list of access groups that are allowed to enter. Access groups are loaded from the file pointed to by `accessGroupFilename`."
     shared String[]? accessGroups = null,
     "The 'Host' header value to use in the request to the next hop."
     shared String nextHost = port == 80 then host else host + ":" + port.string,
@@ -60,11 +65,11 @@ class NextHop (
 
 "List of next hops which are chosen based on matchHost. These are just examples which forward requests to localhost:8090 with some additional adjustments."
 [NextHop+] nextHops = [
-NextHop { matchHost = "localhost"; host = "localhost"; port = 8090; nextHost = "simpura"; pathPrefix = "/lol"; },
+NextHop { matchHost = "localhost"; host = "localhost"; port = 8090; nextHost = "simpura"; pathPrefix = "/lol"; /* accessGroups = [ "work", "home" ]; */ },
 NextHop { matchHost = "publichost.example.com"; host = "localhost"; port = 8090; pathPrefix = "/lol2"; }
 ];
 
-Map<String, NextHop> nextHopMap = HashMap<String, NextHop>{ entries = { for(i in nextHops) if (i.enabled && i.accessGroups is Null) i.matchHost -> i }; };
+Map<String, NextHop> nextHopMap = HashMap<String, NextHop>{ entries = { for(i in nextHops) if (i.enabled) i.matchHost -> i }; };
 
 Null reject(HttpServerRequest sreq, Integer status, String statusMsg) {
     value sres = sreq.response();
@@ -130,6 +135,28 @@ Target? resolveNextHop(HttpServerRequest sreq, Boolean isTls) {
         }
         sres.end();
         return null;
+    }
+    if (exists groups = nextHop.accessGroups) {
+        value groupSet = HashSet{ elements = groups; };
+        variable value accessOk = false;
+        if (is File file = parsePath(accessGroupFilename).resource) {
+            try (reader = file.Reader()) {
+                value clientHost = sreq.remoteAddress().host();
+                while (exists line = reader.readLine()) {
+                    if (exists colonLoc = line.firstOccurrence(':')) {
+                        if (groupSet.contains(line[0:colonLoc])) {
+                            if (line[colonLoc+1...].split(','.equals).contains(clientHost)) {
+                                accessOk = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (!accessOk) {
+            return reject(sreq, 403, "Forbidden");
+        }
     }
     if (exists pf = nextHop.passwordFile) {
         variable value passwordOk = false;
