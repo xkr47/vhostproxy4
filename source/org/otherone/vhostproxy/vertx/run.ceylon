@@ -179,7 +179,7 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
     String dumpCReq(HttpClientRequest req) => "\n" + req.method().name + " " + req.uri() + dumpHeaders(req.headers(), "");
     String dumpSReq(HttpServerRequest req, String indent) => "\n" + indent + req.method().name + " " + req.uri() + " " + req.version().name + dumpHeaders(req.headers(), indent);
     String dumpCRes(HttpClientResponse res) => "\n" + res.statusCode().string + " " + res.statusMessage() + dumpHeaders(res.headers(), "");
-    String dumpSRes(HttpServerResponse res) => "\n" + res.getStatusCode().string + " " + res.getStatusMessage() + dumpHeaders(res.headers(), "");
+    String dumpSRes(HttpServerResponse res, String indent) => "\n" + indent + res.getStatusCode().string + " " + res.getStatusMessage() + dumpHeaders(res.headers(), indent);
 
     object requestId {
         variable Integer prevRequestId = 0;
@@ -226,7 +226,7 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
             trace(LogType.sres, "Outgoing response fail", t);
         });
         sres.headersEndHandler(() {
-            trace(LogType.sres, "Outgoing response final ``dumpSRes(sres)``");
+            trace(LogType.sres, "Outgoing response final ``dumpSRes(sres, logFile exists then "" else "\t")``");
         });
         sres.bodyEndHandler(() {
             trace(LogType.sres, "Outgoing response complete");
@@ -274,7 +274,7 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
             if (!headers.contains(Names.\iCONTENT_LENGTH)) {
                 sres.setChunked(true);
             }
-            trace(LogType.sres, "Outgoing response initial ``dumpSRes(sres)``");
+            trace(LogType.sres, "Outgoing response initial ``dumpSRes(sres, "")``");
 
             value resPump = MyPump(logFile2, reqId, LogType.resbody, "Response body", cres, sres);
             cres.endHandler(() {
