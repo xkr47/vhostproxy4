@@ -37,16 +37,25 @@ shared object portConfig {
 }
 
 class NextHop (
+    "When the hostname part of the 'Host' header matches, this entry will be used as next hop."
     shared String matchHost,
+    "The hostname/ip of the next hop. Used by default in 'Host' header to next hop, can be overridden by setting `nextHost` explicitly.`"
     shared String host,
+    "The port of the next hop. Used by default in 'Host' header to next hop, can be overridden by setting `nextHost` explicitly.`"
     shared Integer port,
+    "If non-null, the value is prefixed to the path when constructing the request to the next hop."
     shared String? pathPrefix = null,
+    "Use this to enable/disable the rule"
     shared Boolean enabled = true,
+    "If true, users entering using HTTP will be redirected to the HTTPS service. If false the user can access the service both with HTTP and HTTPS."
     shared Boolean forceHttps = false,
     shared String[]? accessGroups = null,
+    "The 'Host' header value to use in the request to the next hop."
     shared String nextHost = port == 80 then host else host + ":" + port.string,
+    "If specified, the user is required to basic-authenticate, and will only be let in if the file has a matching 'username:password' line. Lines can be commented with '#'"
     shared String? passwordFile = null,
-    shared Boolean propagatePassword = false // only has effect if passwordFile is non-null
+    "If true, propagate Authorization header to next hop. If passwordFile is null, Authorization header is always propagated."
+    shared Boolean propagatePassword = false
 ) {}
 
 "List of next hops which are chosen based on matchHost. These are just examples which forward requests to localhost:8090 with some additional adjustments."
