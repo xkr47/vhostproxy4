@@ -146,6 +146,8 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
 
     Regex connectionHeaderValueRE = regex("""\s*,[\s,]*+"""); // from RFC2616
 
+    value keepAliveHeaderValue = "timeout=``serverIdleTimeout``";
+
     void copyEndToEndHeaders(MultiMap from, MultiMap to) {
         to.addAll(from);
         for (name in hopByHopHeaders) {
@@ -222,8 +224,8 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
             trace(LogType.sreq, "Incoming request complete");
         });
         value sres = sreq.response();
-        value keepAliveHeaderValue = "timeout=``serverIdleTimeout``";
         sres.headers().add("Keep-Alive", keepAliveHeaderValue);
+        sres.headers().add(Names.\iCONNECTION, "keep-alive");
         sres.exceptionHandler((Throwable t) {
             trace(LogType.sres, "Outgoing response fail", t);
         });
@@ -274,6 +276,7 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
             value headers = cres.headers();
             copyEndToEndHeaders(headers, sres.headers());
             sres.headers().add("Keep-Alive", keepAliveHeaderValue);
+            sres.headers().add(Names.\iCONNECTION, "keep-alive");
             if (!headers.contains(Names.\iCONTENT_LENGTH)) {
                 sres.setChunked(true);
             }
