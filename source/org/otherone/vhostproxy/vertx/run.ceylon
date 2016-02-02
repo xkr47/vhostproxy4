@@ -222,7 +222,8 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
             trace(LogType.sreq, "Incoming request complete");
         });
         value sres = sreq.response();
-        sres.headers().add("Keep-Alive", "timeout=``serverIdleTimeout``");
+        value keepAliveHeaderValue = "timeout=``serverIdleTimeout``";
+        sres.headers().add("Keep-Alive", keepAliveHeaderValue);
         sres.exceptionHandler((Throwable t) {
             trace(LogType.sres, "Outgoing response fail", t);
         });
@@ -272,6 +273,7 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
             sres.setStatusMessage(cres.statusMessage());
             value headers = cres.headers();
             copyEndToEndHeaders(headers, sres.headers());
+            sres.headers().add("Keep-Alive", keepAliveHeaderValue);
             if (!headers.contains(Names.\iCONTENT_LENGTH)) {
                 sres.setChunked(true);
             }
