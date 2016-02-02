@@ -37,6 +37,8 @@ shared object portConfig {
     shared Integer publicHttpsPort = listenHttpsPort;
 }
 
+Integer serverIdleTimeout = 60;
+
 "A file containing 'group:commaSeparatedListOfIps'. Example: 'home:192.168.1.2,127.0.0.1'. IPv6 addresses also allowed in uncompressed format e.g. 0:0:0:0:0:0:0:1 for localhost."
 String accessGroupFilename = "accessGroups.txt";
 

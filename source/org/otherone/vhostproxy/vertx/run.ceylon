@@ -222,6 +222,7 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
             trace(LogType.sreq, "Incoming request complete");
         });
         value sres = sreq.response();
+        sres.headers().add("Keep-Alive", "timeout=``serverIdleTimeout``");
         sres.exceptionHandler((Throwable t) {
             trace(LogType.sres, "Outgoing response fail", t);
         });
@@ -333,7 +334,6 @@ shared void run() {
         maxWaitQueueSize = 20;
         tryUseCompression = false;
     });
-    value serverIdleTimeout = 60;
     myVertx.createHttpServer(HttpServerOptions {
         compressionSupported = true;
         // handle100ContinueAutomatically = false;
