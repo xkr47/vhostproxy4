@@ -299,6 +299,7 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
         creqh.set("Host", nextHop.hostHeader);
         creqh.set("X-Host", origHost);
         creqh.set("X-Forwarded-For", chost);
+        creqh.set("X-Forwarded-Proto", isTls then "https" else "http");
         value transferEncoding = sreqh.get(Names.\iTRANSFER_ENCODING);
         if (exists transferEncoding, transferEncoding.contains("chunked")) {
             creq.setChunked(true);
