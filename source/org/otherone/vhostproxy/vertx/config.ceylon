@@ -42,6 +42,9 @@ Integer serverIdleTimeout = 60;
 "A file containing 'group:commaSeparatedListOfIps'. Example: 'home:192.168.1.2,127.0.0.1'. IPv6 addresses also allowed in uncompressed format e.g. 0:0:0:0:0:0:0:1 for localhost."
 String accessGroupFilename = "accessGroups.txt";
 
+Boolean dumpRequestBody = true;
+Boolean dumpResponseBody = false;
+
 class NextHop (
     "When the hostname part of the 'Host' header matches, this entry will be used as next hop."
     shared String matchHost,

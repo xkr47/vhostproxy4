@@ -55,26 +55,28 @@ Logger log = logger(`package`);
 
 ReentrantLock logLock = ReentrantLock();
 
-class MyPump<T>(AsyncFile logFile, String reqId, LogType logType, String type, ReadStream<T> readStream, WriteStream<T> writeStream, Anything()? firstBufferWrittenHandler = null) given T satisfies Buffer {
+class MyPump<T>(AsyncFile logFile, String reqId, LogType logType, String type, ReadStream<T> readStream, WriteStream<T> writeStream, Boolean dumpBody, Anything()? firstBufferWrittenHandler = null) given T satisfies Buffer {
     void dataHandler(T? data) {
         writeStream.write(data);
         if (exists firstBufferWrittenHandler) { firstBufferWrittenHandler(); }
 
         try (logLock) {
             if (exists data) {
-                logFile.write(buffer.buffer("``reqId`` ``logType.str`` ``system.milliseconds`` ``data.length()`` bytes:\n", "UTF-8"));
-                value prefix = "``reqId`` ``LogType.none.str`` ";
-                variable value start = 0;
-                for (i in 0:data.length()) {
-                    if (data.getUnsignedByte(i) == '\n'.integer.byte) {
-                        logFile.write(buffer.buffer(prefix, "UTF-8"));
-                        logFile.write(data.slice(start, i + 1));
-                        start = i+1;
+                logFile.write(buffer.buffer("``reqId`` ``logType.str`` ``system.milliseconds`` ``data.length()`` bytes``dumpBody then ":" else ""``\n", "UTF-8"));
+                if (dumpBody) {
+                    value prefix = "``reqId`` ``LogType.none.str`` ";
+                    variable value start = 0;
+                    for (i in 0:data.length()) {
+                        if (data.getUnsignedByte(i) == '\n'.integer.byte) {
+                            logFile.write(buffer.buffer(prefix, "UTF-8"));
+                            logFile.write(data.slice(start, i + 1));
+                            start = i+1;
+                        }
                     }
+                    logFile.write(buffer.buffer(prefix, "UTF-8"));
+                    logFile.write(data.slice(start, data.length()));
+                    logFile.write(buffer.buffer("\n", "UTF-8"));
                 }
-                logFile.write(buffer.buffer(prefix, "UTF-8"));
-                logFile.write(data.slice(start, data.length()));
-                logFile.write(buffer.buffer("\n", "UTF-8"));
             } else {
                 logFile.write(buffer.buffer("``reqId`` ``logType.str`` ``system.milliseconds``` null buffer\n", "UTF-8"));
             }
@@ -282,7 +284,7 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
             }
             trace(LogType.sres, "Outgoing response initial ``dumpSRes(sres, "")``");
 
-            value resPump = MyPump(logFile2, reqId, LogType.resbody, "Response body", cres, sres);
+            value resPump = MyPump(logFile2, reqId, LogType.resbody, "Response body", cres, sres, dumpResponseBody);
             cres.endHandler(() {
                 trace(LogType.cres, "Incoming response complete");
                 return sres.end();
@@ -312,7 +314,7 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
                 trace(LogType.creq, "Outgoing request final:``dumpCReq(creq)``");
             }
         }
-        value reqPump = MyPump(logFile2, reqId, LogType.reqbody, "Request body", sreq, creq, dumpFinalRequest); // TODO dump contents
+        value reqPump = MyPump(logFile2, reqId, LogType.reqbody, "Request body", sreq, creq, dumpRequestBody, dumpFinalRequest);
         sreq.endHandler(() {
             creq.end();
             dumpFinalRequest();
