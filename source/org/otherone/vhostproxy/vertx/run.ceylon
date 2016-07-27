@@ -333,35 +333,49 @@ shared void run() {
 
     // TODO timeouts
     // TODO test responses without body e.g. 204
-
     value myVertx = vertx.vertx();
-    value client = myVertx.createHttpClient(HttpClientOptions{
-        connectTimeout = 10;
-        idleTimeout = 120;
-        maxPoolSize = 1000;
-        maxWaitQueueSize = 20;
-        tryUseCompression = false;
+    value verticle = MyVerticle();
+    verticle.deploy(myVertx, null, (String|Throwable res) {
+        if (is String res) {
+            log.info("Verticle deployed, deployment id is: ``res``");
+        } else {
+            log.error("Verticle deployment failed!", res);
+        }
     });
-    myVertx.createHttpServer(HttpServerOptions {
-        compressionSupported = true;
-        // handle100ContinueAutomatically = false;
-        reuseAddress = true;
-        idleTimeout = serverIdleTimeout;
-    }).requestHandler(ProxyService(client, false, myVertx).requestHandler).listen(portConfig.listenHttpPort);
-    log.info("HTTP Started on port ``portConfig.listenHttpPort``, sample public url: http://localhost:``portConfig.publicHttpPort``/");
-    String? keystorePassword;
-    "Password file not found" assert (is File keystorePasswordFile = parsePath("keystore-password").resource);
-    try (keystorePasswordFileReader = keystorePasswordFile.Reader("UTF-8")) {
-        keystorePassword = keystorePasswordFileReader.readLine();
+}
+
+shared class MyVerticle() extends Verticle() {
+    shared actual void start() {
+        log.info("Verticle starting..");
+
+        value client = vertx.createHttpClient(HttpClientOptions{
+            connectTimeout = 10;
+            idleTimeout = 120;
+            maxPoolSize = 1000;
+            maxWaitQueueSize = 20;
+            tryUseCompression = false;
+        });
+        vertx.createHttpServer(HttpServerOptions {
+            compressionSupported = true;
+            // handle100ContinueAutomatically = false;
+            reuseAddress = true;
+            idleTimeout = serverIdleTimeout;
+        }).requestHandler(ProxyService(client, false, vertx).requestHandler).listen(portConfig.listenHttpPort);
+        log.info("HTTP Started on port ``portConfig.listenHttpPort``, sample public url: http://localhost:``portConfig.publicHttpPort``/");
+        String? keystorePassword;
+        "Password file not found" assert (is File keystorePasswordFile = parsePath("keystore-password").resource);
+        try (keystorePasswordFileReader = keystorePasswordFile.Reader("UTF-8")) {
+            keystorePassword = keystorePasswordFileReader.readLine();
+        }
+        "Password file was empty" assert (exists keystorePassword);
+        vertx.createHttpServer(HttpServerOptions {
+            compressionSupported = true;
+            // handle100ContinueAutomatically = false;
+            reuseAddress = true;
+            idleTimeout = serverIdleTimeout;
+            ssl = true;
+            keyStoreOptions = JksOptions { password = keystorePassword; path = "keystore"; };
+        }).requestHandler(ProxyService(client, true, vertx).requestHandler).listen(portConfig.listenHttpsPort);
+        log.info("HTTPS Started on port ``portConfig.listenHttpsPort``, sample public url: https://localhost:``portConfig.publicHttpsPort``/ . Startup complete.");
     }
-    "Password file was empty" assert (exists keystorePassword);
-    myVertx.createHttpServer(HttpServerOptions {
-        compressionSupported = true;
-        // handle100ContinueAutomatically = false;
-        reuseAddress = true;
-        idleTimeout = serverIdleTimeout;
-        ssl = true;
-        keyStoreOptions = JksOptions { password = keystorePassword; path = "keystore"; };
-    }).requestHandler(ProxyService(client, true, myVertx).requestHandler).listen(portConfig.listenHttpsPort);
-    log.info("HTTPS Started on port ``portConfig.listenHttpsPort``, sample public url: https://localhost:``portConfig.publicHttpsPort``/ . Startup complete.");
 }
