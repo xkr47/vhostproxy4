@@ -1,3 +1,9 @@
+import ceylon.buffer.base {
+    base64StringStandard
+}
+import ceylon.buffer.charset {
+    iso_8859_1
+}
 import ceylon.collection {
     HashMap,
     HashSet
@@ -5,12 +11,6 @@ import ceylon.collection {
 import ceylon.file {
     parsePath,
     File
-}
-import ceylon.io.base64 {
-    decode
-}
-import ceylon.io.buffer {
-    newByteBufferWithData
 }
 
 import io.netty.handler.codec.http {
@@ -85,7 +85,7 @@ Null reject(HttpServerRequest sreq, Integer status, String statusMsg) {
 }
 
 String decodeBase64(String s) {
-    return String(decode(newByteBufferWithData(*(s.map((ch) => ch.integer.byte)))).map((Byte b) => b.unsigned.character));
+    return iso_8859_1.decode(base64StringStandard.decode(s));
 }
 
 String extractHosname(String hostHeader) {
