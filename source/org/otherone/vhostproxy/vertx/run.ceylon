@@ -360,8 +360,13 @@ shared class MyVerticle() extends Verticle() {
             // handle100ContinueAutomatically = false;
             reuseAddress = true;
             idleTimeout = serverIdleTimeout;
-        }).requestHandler(ProxyService(client, false, vertx).requestHandler).listen(portConfig.listenHttpPort);
-        log.info("HTTP Started on port ``portConfig.listenHttpPort``, sample public url: http://localhost:``portConfig.publicHttpPort``/");
+        }).requestHandler(ProxyService(client, false, vertx).requestHandler).listen(portConfig.listenHttpPort, (HttpServer|Throwable res) {
+            if (is HttpServer res) {
+                log.info("HTTP Started on port ``portConfig.listenHttpPort``, sample public url: http://localhost:``portConfig.publicHttpPort``/");
+            } else {
+                log.error("HTTP failed on port ``portConfig.listenHttpPort``", res);
+            }
+        });
         String? keystorePassword;
         "Password file not found" assert (is File keystorePasswordFile = parsePath("keystore-password").resource);
         try (keystorePasswordFileReader = keystorePasswordFile.Reader("UTF-8")) {
@@ -375,7 +380,13 @@ shared class MyVerticle() extends Verticle() {
             idleTimeout = serverIdleTimeout;
             ssl = true;
             keyStoreOptions = JksOptions { password = keystorePassword; path = "keystore"; };
-        }).requestHandler(ProxyService(client, true, vertx).requestHandler).listen(portConfig.listenHttpsPort);
-        log.info("HTTPS Started on port ``portConfig.listenHttpsPort``, sample public url: https://localhost:``portConfig.publicHttpsPort``/ . Startup complete.");
+        }).requestHandler(ProxyService(client, true, vertx).requestHandler).listen(portConfig.listenHttpsPort, (HttpServer|Throwable res) {
+            if (is HttpServer res) {
+                log.info("HTTPS Started on port ``portConfig.listenHttpsPort``, sample public url: https://localhost:``portConfig.publicHttpsPort``/ .");
+            } else {
+                log.error("HTTPS failed on port ``portConfig.listenHttpPort``", res);
+            }
+        });
+        log.info("Startup initialized.");
     }
 }
