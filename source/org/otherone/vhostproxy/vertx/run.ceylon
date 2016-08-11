@@ -22,7 +22,7 @@ import ceylon.regex {
 
 import io.netty.handler.codec.http {
     HttpHeaders {
-        Names
+        Names // HttpHeaderNames is not deprecated but contains AsciiStrings instead :P
     }
 }
 import io.vertx.ceylon.core {
@@ -134,6 +134,13 @@ class LogType of sreq | creq | cres | sres | reqbody | resbody | none {
     assert(str.size == 3);
 }
 
+shared class RejectReason of incomingRequestFail | outgoingRequestFail | incomingResponseFail | noHostHeader {
+    shared new incomingRequestFail {}
+    shared new outgoingRequestFail {}
+    shared new incomingResponseFail {}
+    shared new noHostHeader {}
+}
+
 class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
     Set<String> hopByHopHeaders = HashSet<String>{ elements = {
         Names.\iCONNECTION,
@@ -237,15 +244,9 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
         sres.bodyEndHandler(() {
             trace(LogType.sres, "Outgoing response complete");
         });
-
-        void fail(Integer code, String msg) {
-            sres.setStatusCode(code);
-            sres.setStatusMessage(msg);
-            sres.end();
-        }
         sreq.exceptionHandler((Throwable t) {
             trace(LogType.sreq, "Incoming request fail", t);
-            fail(500, t.message);
+            fail(sreq, 500, RejectReason.incomingRequestFail, t.message);
         });
 /*        if (sreq.version() != http_1_1) {
             fail(505, "Only HTTP/1.1 supported");
@@ -262,7 +263,7 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
         value sreqh = sreq.headers();
         value origHost = sreqh.get("Host");
         if (! exists origHost) {
-            fail(400, "Exhausted resources while trying to extract Host header from the request");
+            fail(sreq, 400, RejectReason.noHostHeader);
             return;
         }
         value creq = client.request(sreq.method(), nextHop.socketPort, nextHop.socketHost, nextHop.uri);
@@ -270,7 +271,7 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
             trace(LogType.creq, "Incoming response ``dumpCRes(cres)``");
             cres.exceptionHandler((Throwable t) {
                 trace(LogType.cres, "Incoming response fail", t);
-                fail(502, t.message);
+                fail(sreq, 502, RejectReason.incomingResponseFail, t.message);
             });
 
             sres.setStatusCode(cres.statusCode());
@@ -294,7 +295,7 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
         });
         creq.exceptionHandler((Throwable t) {
             trace(LogType.creq, "Outgoing request fail", t);
-            fail(502, t.message);
+            fail(sreq, 502, RejectReason.outgoingRequestFail, t.message);
         });
         value creqh = creq.headers();
         copyEndToEndHeaders(sreqh, creqh);

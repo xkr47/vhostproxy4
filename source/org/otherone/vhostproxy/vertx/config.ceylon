@@ -2,7 +2,8 @@ import ceylon.buffer.base {
     base64StringStandard
 }
 import ceylon.buffer.charset {
-    iso_8859_1
+    iso_8859_1,
+    utf8
 }
 import ceylon.collection {
     HashMap,
@@ -24,6 +25,12 @@ import io.vertx.ceylon.core.http {
     post,
     put,
     patch
+}
+import ceylon.buffer.codec {
+    strict
+}
+import java.lang {
+    RuntimeException
 }
 
 shared object portConfig {
@@ -76,11 +83,48 @@ NextHop { matchHost = "publichost.example.com"; host = "localhost"; port = 8090;
 
 Map<String, NextHop> nextHopMap = HashMap<String, NextHop>{ entries = { for(i in nextHops) if (i.enabled) i.matchHost -> i }; };
 
-Null reject(HttpServerRequest sreq, Integer status, String statusMsg) {
+"Used by the main proxy app to let the configuration decide how to report failures."
+Null fail(HttpServerRequest sreq, Integer status, RejectReason reason, String? detail = null) {
+    value statusMsg = detail else (
+        switch(reason)
+        case (RejectReason.noHostHeader) "Exhausted resources while trying to extract Host header from the request"
+        else ""
+    );
+    value htmlFile = switch(reason)
+    case(RejectReason.noHostHeader) "errors/4xx.html"
+    case(RejectReason.incomingRequestFail | RejectReason.outgoingRequestFail | RejectReason.incomingResponseFail) "errors/5xx.html";
+    return reject(sreq, status, statusMsg, htmlFile);
+}
+
+Null reject(HttpServerRequest sreq, Integer status, String statusMsg, String htmlFile) {
     value sres = sreq.response();
     sres.setStatusCode(status);
     sres.setStatusMessage(statusMsg);
-    sres.end();
+    if (is File file = parsePath(htmlFile).resource) {
+        try (fileReader = file.Reader()) {
+            String escape(String x) => x
+                    .replace("&", "&amp;")
+                    .replace("\"", "&quot;")
+                    .replace("<", "&lt;")
+            ;
+            value bytes = fileReader.readBytes(file.size);
+            value str = utf8.decode(bytes, strict);
+            value host = sreq.headers().get("Host");
+            value res = str
+                    .replace("{code}", status.string)
+                    .replace("{msg}", escape(statusMsg))
+                    .replace("{host}", escape(host else "<unknown>"))
+            ;
+            sres.headers().set(Names.\iCONTENT_TYPE, "text/html; charset=utf-8");
+            sres.end(res);
+        } catch (RuntimeException e) {
+            log.warn("Failed to process error file ``htmlFile``", e);
+            sres.end();
+        }
+    } else {
+        log.warn("Failed to find error file ``htmlFile``");
+        sres.end();
+    }
     return null;
 }
 
@@ -109,20 +153,20 @@ String extractHosname(String hostHeader) {
 "Resolve the next hop for this request. If no next hop found, the response must be taken care of and null returned."
 Target? resolveNextHop(HttpServerRequest sreq, Boolean isTls) {
     if (sreq.method() == connect) {
-        return reject(sreq, 405, "Method not supported");
+        return reject(sreq, 405, "Method not supported", "errors/4xx.html");
     }
     assert (exists uriFirstCharacter = sreq.uri().first);
     if (uriFirstCharacter != '/') {
-        return reject(sreq, 400, "Proxy requests not supported");
+        return reject(sreq, 400, "Proxy requests not supported", "errors/4xx.html");
     }
     value hostHeader = sreq.headers().get("Host");
     if (! exists hostHeader) {
-        return reject(sreq, 400, "Exhausted resources while trying to extract Host header from the request");
+        return fail(sreq, 400, RejectReason.noHostHeader);
     }
     value hostname = extractHosname(hostHeader);
     value nextHop = nextHopMap.get(hostname);
     if (!exists nextHop) {
-        return reject(sreq, 404, "No service defined for ``hostHeader``");
+        return reject(sreq, 404, "No service defined for ``hostHeader``", "errors/4xx.html");
     }
     if (nextHop.forceHttps && !isTls) {
         // require user to reload request with https
@@ -160,7 +204,7 @@ Target? resolveNextHop(HttpServerRequest sreq, Boolean isTls) {
             }
         }
         if (!accessOk) {
-            return reject(sreq, 403, "Forbidden");
+            return reject(sreq, 403, "Forbidden", "errors/4xx.html");
         }
     }
     if (exists pf = nextHop.passwordFile) {
