@@ -5,6 +5,10 @@ resource=resource
 
 [defaults]
 encoding=UTF-8
+offline=false
+flatclasspath=false
+autoexportmavendependencies=false
+fullyexportmavendependencies=false
 
 [repositories]
 remote=aether:/home/xkr47/jonas/apache-maven/apache-maven/conf/settings.xml

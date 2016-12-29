@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Ceylon: io.vertx.ceylon.core/3.3.3">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ceylon/cache/io/vertx/ceylon/core/3.3.3/io.vertx.ceylon.core-3.3.3.car!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.ceylon/cache/io/vertx/ceylon/core/3.3.3/io.vertx.ceylon.core-3.3.3.src!/" />
+    </SOURCES>
+  </library>
+</component>

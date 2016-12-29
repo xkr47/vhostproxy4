@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Ceylon: ceylon.language/1.3.1">
+    <CLASSES>
+      <root url="jar://$APPLICATION_PLUGINS_DIR$/CeylonIDEA/classes/embeddedDist/repo/ceylon/language/1.3.1/ceylon.language-1.3.1.car!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$APPLICATION_PLUGINS_DIR$/CeylonIDEA/classes/embeddedDist/repo/ceylon/language/1.3.1/ceylon.language-1.3.1.src!/" />
+    </SOURCES>
+  </library>
+</component>

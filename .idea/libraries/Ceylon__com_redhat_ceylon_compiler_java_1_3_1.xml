@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Ceylon: com.redhat.ceylon.compiler.java/1.3.1">
+    <CLASSES>
+      <root url="jar://$APPLICATION_PLUGINS_DIR$/CeylonIDEA/classes/embeddedDist/repo/com/redhat/ceylon/compiler/java/1.3.1/com.redhat.ceylon.compiler.java-1.3.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$APPLICATION_PLUGINS_DIR$/CeylonIDEA/classes/embeddedDist/repo/com/redhat/ceylon/compiler/java/1.3.1/com.redhat.ceylon.compiler.java-1.3.1.src!/" />
+    </SOURCES>
+  </library>
+</component>

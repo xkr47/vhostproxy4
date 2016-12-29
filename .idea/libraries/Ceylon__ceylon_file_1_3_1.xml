@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Ceylon: ceylon.file/1.3.1">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ceylon/cache/ceylon/file/1.3.1/ceylon.file-1.3.1.car!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.ceylon/cache/ceylon/file/1.3.1/ceylon.file-1.3.1.src!/" />
+    </SOURCES>
+  </library>
+</component>
