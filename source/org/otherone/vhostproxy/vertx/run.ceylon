@@ -99,6 +99,7 @@ object logFiles {
         value log2 = myVertx.fileSystem().openBlocking(logFile, OpenOptions { create = true; read = false; write = true; truncateExisting = false; });
         value logProps = myVertx.fileSystem().propsBlocking(logFile);
         log2.setWritePos(logProps.size());
+        log2.write(buffer.buffer("-----------------------------------------------------\n", "UTF-8"));
         logs.put(logBase, log2);
         return log2;
     }
