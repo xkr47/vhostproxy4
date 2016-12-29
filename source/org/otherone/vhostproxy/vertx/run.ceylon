@@ -47,10 +47,6 @@ import io.vertx.ceylon.core.streams {
     WriteStream
 }
 
-import java.util.concurrent.locks {
-    JReentrantLock=ReentrantLock
-}
-
 Logger log = logger(`package`);
 
 ReentrantLock logLock = ReentrantLock();
@@ -84,18 +80,12 @@ class MyPump<T>(AsyncFile logFile, String reqId, LogType logType, String type, R
 
         if (writeStream.writeQueueFull()) {
             readStream.pause();
-            writeStream.drainHandler(readStream.resume);
+            writeStream.drainHandler(tc0(readStream.resume));
         }
     }
     shared void start() {
-        readStream.handler(dataHandler);
+        readStream.handler(tc(dataHandler));
     }
-}
-
-class ReentrantLock() satisfies Obtainable {
-    JReentrantLock lock = JReentrantLock();
-    shared actual void obtain() => lock.lockInterruptibly();
-    shared actual void release(Throwable? error) => lock.unlock();
 }
 
 object logFiles {
@@ -244,10 +234,10 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
         sres.bodyEndHandler(() {
             trace(LogType.sres, "Outgoing response complete");
         });
-        sreq.exceptionHandler((Throwable t) {
+        sreq.exceptionHandler(tc((Throwable t) {
             trace(LogType.sreq, "Incoming request fail", t);
             fail(sreq, 500, RejectReason.incomingRequestFail, t.message);
-        });
+        }));
 /*        if (sreq.version() != http_1_1) {
             fail(505, "Only HTTP/1.1 supported");
             return;
@@ -267,7 +257,7 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
             return;
         }
         value creq = client.request(sreq.method(), nextHop.socketPort, nextHop.socketHost, nextHop.uri);
-        creq.handler((HttpClientResponse cres) {
+        creq.handler(tc((HttpClientResponse cres) {
             trace(LogType.creq, "Incoming response ``dumpCRes(cres)``");
             cres.exceptionHandler((Throwable t) {
                 trace(LogType.cres, "Incoming response fail", t);
@@ -286,17 +276,17 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
             trace(LogType.sres, "Outgoing response initial ``dumpSRes(sres, "")``");
 
             value resPump = MyPump(logFile2, reqId, LogType.resbody, "Response body", cres, sres, dumpResponseBody);
-            cres.endHandler(() {
+            cres.endHandler(tc0(() {
                 trace(LogType.cres, "Incoming response complete");
                 return sres.end();
-            });
+            }));
             resPump.start();
             trace(LogType.resbody, "Incoming response body");
-        });
-        creq.exceptionHandler((Throwable t) {
+        }));
+        creq.exceptionHandler(tc((Throwable t) {
             trace(LogType.creq, "Outgoing request fail", t);
             fail(sreq, 502, RejectReason.outgoingRequestFail, t.message);
-        });
+        }));
         value creqh = creq.headers();
         copyEndToEndHeaders(sreqh, creqh);
         creqh.set("Host", nextHop.hostHeader);
@@ -316,11 +306,11 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
             }
         }
         value reqPump = MyPump(logFile2, reqId, LogType.reqbody, "Request body", sreq, creq, dumpRequestBody, dumpFinalRequest);
-        sreq.endHandler(() {
+        sreq.endHandler(tc0(() {
             creq.end();
             dumpFinalRequest();
             trace(LogType.sreq, "Incoming request complete");
-        });
+        }));
         trace(LogType.reqbody, "Incoming request body");
         reqPump.start();
     }
@@ -361,7 +351,7 @@ shared class MyVerticle() extends Verticle() {
             // handle100ContinueAutomatically = false;
             reuseAddress = true;
             idleTimeout = serverIdleTimeout;
-        }).requestHandler(ProxyService(client, false, vertx).requestHandler).listen(portConfig.listenHttpPort, (HttpServer|Throwable res) {
+        }).requestHandler(tc(ProxyService(client, false, vertx).requestHandler)).listen(portConfig.listenHttpPort, (HttpServer|Throwable res) {
             if (is HttpServer res) {
                 log.info("HTTP Started on port ``portConfig.listenHttpPort``, sample public url: http://localhost:``portConfig.publicHttpPort``/");
             } else {
@@ -381,7 +371,7 @@ shared class MyVerticle() extends Verticle() {
             idleTimeout = serverIdleTimeout;
             ssl = true;
             keyStoreOptions = JksOptions { password = keystorePassword; path = "keystore"; };
-        }).requestHandler(ProxyService(client, true, vertx).requestHandler).listen(portConfig.listenHttpsPort, (HttpServer|Throwable res) {
+        }).requestHandler(tc(ProxyService(client, true, vertx).requestHandler)).listen(portConfig.listenHttpsPort, (HttpServer|Throwable res) {
             if (is HttpServer res) {
                 log.info("HTTPS Started on port ``portConfig.listenHttpsPort``, sample public url: https://localhost:``portConfig.publicHttpsPort``/ .");
             } else {
