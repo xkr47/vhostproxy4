@@ -258,7 +258,7 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
         }
         value creq = client.request(sreq.method(), nextHop.socketPort, nextHop.socketHost, nextHop.uri);
         creq.handler(tc((HttpClientResponse cres) {
-            trace(LogType.creq, "Incoming response ``dumpCRes(cres)``");
+            trace(LogType.cres, "Incoming response ``dumpCRes(cres)``");
             cres.exceptionHandler((Throwable t) {
                 trace(LogType.cres, "Incoming response fail", t);
                 fail(sreq, 502, RejectReason.incomingResponseFail, t.message);
