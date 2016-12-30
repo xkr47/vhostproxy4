@@ -9,6 +9,7 @@ offline=false
 flatclasspath=false
 autoexportmavendependencies=false
 fullyexportmavendependencies=false
+overrides=overrides.xml
 
 [repositories]
 remote=aether:/home/xkr47/jonas/apache-maven/apache-maven/conf/settings.xml
