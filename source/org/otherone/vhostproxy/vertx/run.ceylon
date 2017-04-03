@@ -286,7 +286,8 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
         }));
         creq.exceptionHandler(tc((Throwable t) {
             trace(LogType.creq, "Outgoing request fail", t);
-            fail(sreq, 502, RejectReason.outgoingRequestFail, t.message);
+            value msg = t.message.startsWith("connection timed out:") then "connection timed out" else t.message;
+            fail(sreq, 502, RejectReason.outgoingRequestFail, msg);
         }));
         value creqh = creq.headers();
         copyEndToEndHeaders(sreqh, creqh);
