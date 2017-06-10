@@ -10,7 +10,7 @@
       </configuration>
     </facet>
   </component>
-  <component name="NewModuleRootManager">
+  <component name="NewModuleRootManager" inherit-compiler-output="false">
     <output url="file:///media/truecrypt-xkr47/ceylon/intellij/vhostproxy4/modules" />
     <output-test url="file:///media/truecrypt-xkr47/ceylon/intellij/vhostproxy4/modules" />
     <exclude-output />

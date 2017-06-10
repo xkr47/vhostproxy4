@@ -52,29 +52,25 @@ Logger log = logger(`package`);
 ReentrantLock logLock = ReentrantLock();
 
 class MyPump<T>(AsyncFile logFile, String reqId, LogType logType, String type, ReadStream<T> readStream, WriteStream<T> writeStream, Boolean dumpBody, Anything()? firstBufferWrittenHandler = null) given T satisfies Buffer {
-    void dataHandler(T? data) {
+    void dataHandler(T data) {
         writeStream.write(data);
         if (exists firstBufferWrittenHandler) { firstBufferWrittenHandler(); }
 
         try (logLock) {
-            if (exists data) {
-                logFile.write(buffer.buffer("``reqId`` ``logType.str`` ``system.milliseconds`` ``data.length()`` bytes``dumpBody then ":" else ""``\n", "UTF-8"));
-                if (dumpBody) {
-                    value prefix = "``reqId`` ``LogType.none.str`` ";
-                    variable value start = 0;
-                    for (i in 0:data.length()) {
-                        if (data.getUnsignedByte(i) == '\n'.integer.byte) {
-                            logFile.write(buffer.buffer(prefix, "UTF-8"));
-                            logFile.write(data.slice(start, i + 1));
-                            start = i+1;
-                        }
+            logFile.write(buffer.buffer("``reqId`` ``logType.str`` ``system.milliseconds`` ``data.length()`` bytes``dumpBody then ":" else ""``\n", "UTF-8"));
+            if (dumpBody) {
+                value prefix = "``reqId`` ``LogType.none.str`` ";
+                variable value start = 0;
+                for (i in 0:data.length()) {
+                    if (data.getUnsignedByte(i) == '\n'.integer.byte) {
+                        logFile.write(buffer.buffer(prefix, "UTF-8"));
+                        logFile.write(data.slice(start, i + 1));
+                        start = i+1;
                     }
-                    logFile.write(buffer.buffer(prefix, "UTF-8"));
-                    logFile.write(data.slice(start, data.length()));
-                    logFile.write(buffer.buffer("\n", "UTF-8"));
                 }
-            } else {
-                logFile.write(buffer.buffer("``reqId`` ``logType.str`` ``system.milliseconds``` null buffer\n", "UTF-8"));
+                logFile.write(buffer.buffer(prefix, "UTF-8"));
+                logFile.write(data.slice(start, data.length()));
+                logFile.write(buffer.buffer("\n", "UTF-8"));
             }
         }
 
