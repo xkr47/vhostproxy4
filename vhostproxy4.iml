@@ -23,25 +23,27 @@
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.buffer/1.3.2" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.collection/1.3.2" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.file/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.json/1.3.0" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.language/1.3.2" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.logging/1.3.2" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.regex/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.cli/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.common/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.compiler.java/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.langtools.classfile/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.model/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.module-resolver/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.tool.provider/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.typechecker/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.netty.netty-all/4.1.1.Final" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.vertx.ceylon.core/3.4.0" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.vertx.lang.ceylon/3.4.0" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.vertx.vertx-codegen/3.4.0" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.vertx.vertx-core/3.4.0" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: org.antlr.antlr/2.7.7" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: org.antlr.runtime/3.4" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: org.antlr.stringtemplate/3.2.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.lmax:disruptor/3.3.6" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.netty:netty-buffer/4.1.9.Final" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.netty:netty-codec-http/4.1.9.Final" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.netty:netty-codec-http2/4.1.9.Final" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.netty:netty-common/4.1.9.Final" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.netty:netty-handler/4.1.9.Final" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.netty:netty-handler-proxy/4.1.9.Final" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.netty:netty-resolver/4.1.9.Final" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.netty:netty-resolver-dns/4.1.9.Final" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.netty:netty-transport/4.1.9.Final" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.nitor.api:backend/1.8-SNAPSHOT" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.vertx:vertx-core/3.4.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.vertx:vertx-web/3.4.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: org.apache.logging.log4j:log4j-1.2-api/2.8.2" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: org.apache.logging.log4j:log4j-api/2.8.2" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: org.apache.logging.log4j:log4j-core/2.8.2" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: org.apache.logging.log4j:log4j-jcl/2.8.2" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: org.apache.logging.log4j:log4j-jul/2.8.2" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: org.apache.logging.log4j:log4j-slf4j-impl/2.8.2" level="project" />
   </component>
 </module>

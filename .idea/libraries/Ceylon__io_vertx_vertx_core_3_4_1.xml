@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Ceylon: io.vertx:vertx-core/3.4.1">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../.m2/repository/io/vertx/vertx-core/3.4.1/vertx-core-3.4.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/../.m2/repository/io/vertx/vertx-core/3.4.1/vertx-core-3.4.1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

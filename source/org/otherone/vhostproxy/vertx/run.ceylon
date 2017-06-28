@@ -13,7 +13,14 @@ import ceylon.logging {
     writeSimpleLog,
     addLogWriter,
     defaultPriority,
-    trace
+    trace,
+    Priority,
+    Category,
+    info,
+    debug,
+    warn,
+    error,
+    fatal
 }
 import ceylon.regex {
     regex,
@@ -25,30 +32,55 @@ import io.netty.handler.codec.http {
         Names // HttpHeaderNames is not deprecated but contains AsciiStrings instead :P
     }
 }
-import io.vertx.ceylon.core {
+import io.vertx.core {
     ...
 }
-import io.vertx.ceylon.core.buffer {
-    Buffer,
-    buffer
+import io.vertx.core.buffer {
+    Buffer
 }
-import io.vertx.ceylon.core.file {
+import io.vertx.core.file {
     AsyncFile,
     OpenOptions
 }
-import io.vertx.ceylon.core.http {
+import io.vertx.core.http {
     ...
 }
-import io.vertx.ceylon.core.net {
+import io.vertx.core.net {
     JksOptions
 }
-import io.vertx.ceylon.core.streams {
+import io.vertx.core.streams {
     ReadStream,
     WriteStream
 }
+import io.vertx.ext.web {
+    Router,
+    RoutingContext
+}
+import io.vertx.core.json {
+    JsonObject
+}
+import io.nitor.api.backend.proxy {
+    ...
+}
+/*
+import org.apache.logging.log4j.core.config.plugins.validation.constraints {
+    required
+}
+*/
+import java.util.\ifunction {
+    Supplier
+}
+import java.lang {
+    JString = String,
+    System
+}
+import org.apache.logging.log4j {
+    LogManager,
+    Level
+}
 
 Logger log = logger(`package`);
-
+/*
 ReentrantLock logLock = ReentrantLock();
 
 class MyPump<T>(AsyncFile logFile, String reqId, LogType logType, String type, ReadStream<T> readStream, WriteStream<T> writeStream, Boolean dumpBody, Anything()? firstBufferWrittenHandler = null) given T satisfies Buffer {
@@ -100,7 +132,7 @@ object logFiles {
         return log2;
     }
 }
-
+*/
 class Target (
     shared String socketHost,
     shared Integer socketPort,
@@ -108,7 +140,7 @@ class Target (
     shared String hostHeader,
     shared String logBase
 ){}
-
+/*
 class LogType of sreq | creq | cres | sres | reqbody | resbody | none {
     shared String str;
     shared new sreq { str = ">| "; }
@@ -120,14 +152,14 @@ class LogType of sreq | creq | cres | sres | reqbody | resbody | none {
     shared new none { str = "   "; }
     assert(str.size == 3);
 }
-
+*/
 shared class RejectReason of incomingRequestFail | outgoingRequestFail | incomingResponseFail | noHostHeader {
     shared new incomingRequestFail {}
     shared new outgoingRequestFail {}
     shared new incomingResponseFail {}
     shared new noHostHeader {}
 }
-
+/*
 class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
     Set<String> hopByHopHeaders = HashSet<String>{ elements = {
         Names.\iCONNECTION,
@@ -313,49 +345,121 @@ class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
         reqPump.start();
     }
 }
-
+*/
 "Run the module `org.otherone.vhostproxy`."
 shared void run() {
-    addLogWriter(writeSimpleLog);
-    defaultPriority = trace;
-    log.info("Starting..");
+    setupLogging();
+    log.info("Starting..    ");
 
     // TODO timeouts
     // TODO test responses without body e.g. 204
-    value myVertx = vertx.vertx();
+    value myVertx = Vertx.vertx();
     value verticle = MyVerticle();
-    verticle.deploy(myVertx, null, (String|Throwable res) {
-        if (is String res) {
-            log.info("Verticle deployed, deployment id is: ``res``");
-        } else {
-            log.error("Verticle deployment failed!", res);
+    myVertx.deployVerticle(verticle, DeploymentOptions(), object satisfies Handler<AsyncResult<JString>> {
+        shared actual void handle(AsyncResult<JString> ar) {
+            if (ar.succeeded()) {
+                log.info("Verticle deployed, deployment id is: ``ar.result()``");
+            } else {
+                log.error("Verticle deployment failed!", ar.cause());
+            }
         }
     });
 }
 
-shared class MyVerticle() extends Verticle() {
+void setupLogging() {
+    addLogWriter((Priority priority, Category category, String message, Throwable? throwable) {
+        value logger = LogManager.getLogger(category.string);
+        value level = switch(priority) case(trace) Level.trace case(debug) Level.debug case(info) Level.info case(warn) Level.warn case(error) Level.error case(fatal) Level.fatal else Level.info;
+        if (logger.isEnabled(level)) {
+            logger.log(level, message, throwable);
+        }
+    });
+    defaultPriority = trace;
+    value filePath = parsePath("log4j2.xml");
+    if (filePath.resource is File) {
+        System.setProperty("log4j.configurationFile", "log4j2.xml");
+    }
+    System.setProperty("java.util.logging.manager", "org.apache.logging.log4j.jul.LogManager");
+    System.setProperty("vertx.logger-delegate-factory-class-name", "io.vertx.core.logging.Log4j2LogDelegateFactory");
+    //logger = LogManager.hgetLogger(javaClass<NitorBackend>());
+}
+
+shared class MyVerticle() extends AbstractVerticle() {
     shared actual void start() {
         log.info("Verticle starting..");
 
-        value client = vertx.createHttpClient(HttpClientOptions{
-            connectTimeout = 10;
-            idleTimeout = 120;
-            maxPoolSize = 1000;
-            maxWaitQueueSize = 20;
-            tryUseCompression = false;
-        });
-        vertx.createHttpServer(HttpServerOptions {
-            compressionSupported = true;
-            // handle100ContinueAutomatically = false;
-            reuseAddress = true;
-            idleTimeout = serverIdleTimeout;
-        }).requestHandler(tc(ProxyService(client, false, vertx).requestHandler)).listen(portConfig.listenHttpPort, (HttpServer|Throwable res) {
-            if (is HttpServer res) {
-                log.info("HTTP Started on port ``portConfig.listenHttpPort``, sample public url: http://localhost:``portConfig.publicHttpPort``/");
-            } else {
-                log.error("HTTP failed on port ``portConfig.listenHttpPort``", res);
+        value client = vertx.createHttpClient(HttpClientOptions()
+            .setConnectTimeout(10)
+            .setIdleTimeout(120)
+            .setMaxPoolSize(1000)
+            .setPipelining(false)
+            .setPipeliningLimit(1)
+            .setMaxWaitQueueSize(20)
+            .setUsePooledBuffers(true)
+            .setProtocolVersion(HttpVersion.http11)
+            .setTryUseCompression(false)
+        );
+
+        value router = Router.router(vertx);
+        object targetResolver satisfies Proxy.TargetResolver {
+            shared actual void resolveNextHop(RoutingContext routingContext, Handler<Proxy.Target> targetHandler) {
+                try {
+                    value isTls = if (exists scheme = routingContext.request().scheme()) then scheme == "https" else false;
+                    value nextHop = resolveNextHop2(routingContext.request(), isTls);
+                    if (exists nextHop) {
+                        targetHandler.handle(Proxy.Target (
+                            nextHop.socketHost,
+                            nextHop.socketPort,
+                            nextHop.uri,
+                            nextHop.hostHeader
+                        ));
+                    }
+                } catch (Throwable e) {
+                    log.error("Error", e);
+                }
+            }
+        }
+        Proxy proxy = Proxy(client, targetResolver, serverIdleTimeout, 300, object satisfies Supplier<ProxyTracer> {
+            get() => SimpleLogProxyTracer();
+        }, Proxy.DefaultPumpStarter());
+        router.route().handler(proxy.handle);
+        router.route().failureHandler(object satisfies Handler<RoutingContext> {
+            shared actual void handle(RoutingContext routingContext) {
+                if (routingContext.failed()) {
+                    assert (is Proxy.ProxyException ex = routingContext.failure());
+                    if (!routingContext.response().headWritten()) {
+                        value statusMsg = if (exists cause = ex.cause) then cause.message else (ex.reason == RejectReason.noHostHeader then "Exhausted resources while trying to extract Host header from the request" else "");
+                        routingContext.response().setStatusCode(ex.statusCode);
+                        routingContext.response().headers().set("content-type", "text/plain;charset=UTF-8");
+                        routingContext.response().end(statusMsg);
+                    }
+                } else {
+                    routingContext.next ();
+                }
             }
         });
+
+        vertx.createHttpServer(HttpServerOptions()
+            //.setCompressionSupported(true)
+            // .setHandle100ContinueAutomatically(false)
+            .setReuseAddress(true)
+            .setIdleTimeout(serverIdleTimeout)
+        )
+            .requestHandler(router.accept)
+            .listen(portConfig.listenHttpPort, object satisfies Handler<AsyncResult<HttpServer>> {
+            shared actual void handle(AsyncResult<HttpServer> ar) {
+                if (ar.succeeded()) {
+                    log.info("HTTP Started on port ``portConfig.listenHttpPort``, sample public url: http://localhost:``portConfig.publicHttpPort``/");
+                } else {
+                    log.error("HTTP failed on port ``portConfig.listenHttpPort``", ar.cause());
+                }
+            }
+        });
+
+        /*
+           tc(ProxyService(client, false, vertx).requestHandler))
+         */
+        /*
         String? keystorePassword;
         "Password file not found" assert (is File keystorePasswordFile = parsePath("keystore-password").resource);
         try (keystorePasswordFileReader = keystorePasswordFile.Reader("UTF-8")) {
@@ -376,6 +480,9 @@ shared class MyVerticle() extends Verticle() {
                 log.error("HTTPS failed on port ``portConfig.listenHttpPort``", res);
             }
         });
+        */
         log.info("Startup initialized.");
     }
 }
+
+

@@ -19,12 +19,14 @@ import io.netty.handler.codec.http {
         Names
     }
 }
-import io.vertx.ceylon.core.http {
+import io.vertx.core.http {
     HttpServerRequest,
-    connect,
-    post,
-    put,
-    patch
+    HttpMethod {
+        connect,
+        post,
+        put,
+        patch
+    }
 }
 import ceylon.buffer.codec {
     strict
@@ -151,7 +153,7 @@ String extractHosname(String hostHeader) {
 }
 
 "Resolve the next hop for this request. If no next hop found, the response must be taken care of and null returned."
-Target? resolveNextHop(HttpServerRequest sreq, Boolean isTls) {
+Target? resolveNextHop2(HttpServerRequest sreq, Boolean isTls) {
     if (sreq.method() == connect) {
         return reject(sreq, 405, "Method not supported", "errors/4xx.html");
     }

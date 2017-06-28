@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Ceylon: io.netty:netty-handler-proxy/4.1.9.Final">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../.m2/repository/io/netty/netty-handler-proxy/4.1.9.Final/netty-handler-proxy-4.1.9.Final.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/../.m2/repository/io/netty/netty-handler-proxy/4.1.9.Final/netty-handler-proxy-4.1.9.Final-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

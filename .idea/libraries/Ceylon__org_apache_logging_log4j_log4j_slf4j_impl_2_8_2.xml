@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Ceylon: org.apache.logging.log4j:log4j-slf4j-impl/2.8.2">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../.m2/repository/org/apache/logging/log4j/log4j-slf4j-impl/2.8.2/log4j-slf4j-impl-2.8.2.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/../.m2/repository/org/apache/logging/log4j/log4j-slf4j-impl/2.8.2/log4j-slf4j-impl-2.8.2-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

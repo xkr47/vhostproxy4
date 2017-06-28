@@ -6,8 +6,8 @@ resource=resource
 [defaults]
 encoding=UTF-8
 offline=false
-flatclasspath=false
-autoexportmavendependencies=false
+flatclasspath=true
+autoexportmavendependencies=true
 fullyexportmavendependencies=false
 overrides=overrides.xml
 
