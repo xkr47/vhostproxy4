@@ -50,7 +50,8 @@ import io.vertx.core.net {
 }
 import io.vertx.core.streams {
     ReadStream,
-    WriteStream
+    WriteStream,
+    Pump
 }
 import io.vertx.ext.web {
     Router,
@@ -72,7 +73,8 @@ import java.util.\ifunction {
 }
 import java.lang {
     JString = String,
-    System
+    System,
+    Void
 }
 import org.apache.logging.log4j {
     LogManager,
@@ -89,40 +91,42 @@ import ceylon.interop.java {
 }
 
 Logger log = logger(`package`);
-/*
-class MyPump<T>(AsyncFile logFile, String reqId, LogType logType, String type, ReadStream<T> readStream, WriteStream<T> writeStream, Boolean dumpBody, Anything()? firstBufferWrittenHandler = null) given T satisfies Buffer {
-    void dataHandler(T data) {
+
+class MyPump(Marker? marker, String reqId, MyLogProxyTracer.LogType logType, String type, ReadStream<Buffer> readStream, WriteStream<Buffer> writeStream, Boolean dumpBody, Log4jLogger logger, Anything()? firstBufferWrittenHandler = null) {
+    void dataHandler(Buffer data) {
         writeStream.write(data);
         if (exists firstBufferWrittenHandler) { firstBufferWrittenHandler(); }
 
-        try (logLock) {
-            logFile.write(buffer.buffer("``reqId`` ``logType.str`` ``system.milliseconds`` ``data.length()`` bytes``dumpBody then ":" else ""``\n", "UTF-8"));
-            if (dumpBody) {
-                value prefix = "``reqId`` ``LogType.none.str`` ";
-                variable value start = 0;
-                for (i in 0:data.length()) {
-                    if (data.getUnsignedByte(i) == '\n'.integer.byte) {
-                        logFile.write(buffer.buffer(prefix, "UTF-8"));
-                        logFile.write(data.slice(start, i + 1));
-                        start = i+1;
-                    }
+        StringBuilder sb = StringBuilder().append("``logType.graphic`` [``reqId``] ``data.length()`` bytes``dumpBody then ":" else ""``");
+        if (dumpBody) {
+            sb.append("\n");
+            value prefix = "``MyLogProxyTracer.LogType.none.graphic`` [``reqId``] ";
+            variable value start = 0;
+            for (i in 0:data.length()) {
+                if (data.getUnsignedByte(i) == '\n'.integer) {
+                    sb.append(prefix);
+                    sb.append(data.slice(start, i + 1).string);
+                    start = i+1;
                 }
-                logFile.write(buffer.buffer(prefix, "UTF-8"));
-                logFile.write(data.slice(start, data.length()));
-                logFile.write(buffer.buffer("\n", "UTF-8"));
             }
+            sb.append(prefix);
+            sb.append(data.slice(start, data.length()).string);
         }
+        logger.trace(marker, sb.string);
 
         if (writeStream.writeQueueFull()) {
             readStream.pause();
-            writeStream.drainHandler(tc0(readStream.resume));
+            writeStream.drainHandler(object satisfies Handler<Void> {
+                handle(Void v) => readStream.resume();
+            });
         }
     }
+
     shared void start() {
         readStream.handler(tc(dataHandler));
     }
 }
-*/
+
 class Target (
     shared String socketHost,
     shared Integer socketPort,
@@ -141,8 +145,9 @@ shared class RejectReason of incomingRequestFail | outgoingRequestFail | incomin
 class MyLogProxyTracer() extends SimpleLogProxyTracer() {
 
     variable String? first = null;
-    variable Marker? marker = null;
-    Log4jLogger logger = LogManager.getLogger(javaClass<MyLogProxyTracer>());
+    shared variable Marker? marker = null;
+    shared Log4jLogger loggr = LogManager.getLogger(javaClass<MyLogProxyTracer>());
+    shared String getReqId() => reqId;
 
     shared actual void incomingRequestStart(RoutingContext ctx, Boolean isTls, Boolean isHTTP2, String chost, String reqId) {
         this.ctx = ctx;
@@ -160,7 +165,7 @@ class MyLogProxyTracer() extends SimpleLogProxyTracer() {
     }
 
     shared actual void trace(SimpleLogProxyTracer.LogType logType, String msg, Throwable? t) {
-        logger.trace(marker, logType.graphic + " [" + reqId + "] " + msg, t);
+        loggr.trace(marker, logType.graphic + " [" + reqId + "] " + msg, t);
     }
 }
 
@@ -202,6 +207,23 @@ void setupLogging() {
     //logger = LogManager.hgetLogger(javaClass<NitorBackend>());
 }
 
+class MyPumpStarter()
+         satisfies Proxy.PumpStarter {
+    shared actual void start(Proxy.PumpStarter.Type type, ReadStream<Buffer> rs, WriteStream<Buffer> ws, ProxyTracer t) {
+        assert(is MyLogProxyTracer t);
+        switch (type)
+        case(Proxy.PumpStarter.Type.request) {
+            MyPump(t.marker, t.getReqId(), MyLogProxyTracer.LogType.reqbody, "Request body", rs, ws, dumpRequestBody, t.loggr).start();
+        }
+        case(Proxy.PumpStarter.Type.response) {
+            MyPump(t.marker, t.getReqId(), MyLogProxyTracer.LogType.resbody, "Response body", rs, ws, dumpResponseBody, t.loggr).start();
+        }
+        else {
+            MyPump(t.marker, t.getReqId(), MyLogProxyTracer.LogType.none, "Unknown body", rs, ws, false, t.loggr).start();
+        }
+    }
+}
+
 shared class MyVerticle() extends AbstractVerticle() {
     shared actual void start() {
         log.info("Verticle starting..");
@@ -239,7 +261,7 @@ shared class MyVerticle() extends AbstractVerticle() {
         }
         Proxy proxy = Proxy(client, targetResolver, serverIdleTimeout, 300, object satisfies Supplier<ProxyTracer> {
             get() => MyLogProxyTracer();
-        }, Proxy.DefaultPumpStarter());
+        }, MyPumpStarter());
         router.route().handler(proxy.handle);
         router.route().failureHandler(object satisfies Handler<RoutingContext> {
             shared actual void handle(RoutingContext routingContext) {
