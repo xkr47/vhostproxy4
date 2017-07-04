@@ -1,16 +1,13 @@
-import ceylon.collection {
-    HashSet,
-    HashMap,
-    MutableMap
-}
 import ceylon.file {
     parsePath,
     File
 }
+import ceylon.interop.java {
+    javaClass
+}
 import ceylon.logging {
     logger,
     Logger,
-    writeSimpleLog,
     addLogWriter,
     defaultPriority,
     trace,
@@ -22,15 +19,9 @@ import ceylon.logging {
     error,
     fatal
 }
-import ceylon.regex {
-    regex,
-    Regex
-}
 
-import io.netty.handler.codec.http {
-    HttpHeaders {
-        Names // HttpHeaderNames is not deprecated but contains AsciiStrings instead :P
-    }
+import io.nitor.api.backend.proxy {
+    ...
 }
 import io.vertx.core {
     ...
@@ -38,56 +29,33 @@ import io.vertx.core {
 import io.vertx.core.buffer {
     Buffer
 }
-import io.vertx.core.file {
-    AsyncFile,
-    OpenOptions
-}
 import io.vertx.core.http {
     ...
 }
-import io.vertx.core.net {
-    JksOptions
-}
 import io.vertx.core.streams {
     ReadStream,
-    WriteStream,
-    Pump
+    WriteStream
 }
 import io.vertx.ext.web {
     Router,
     RoutingContext
 }
-import io.vertx.core.json {
-    JsonObject
-}
-import io.nitor.api.backend.proxy {
-    ...
-}
-/*
-import org.apache.logging.log4j.core.config.plugins.validation.constraints {
-    required
-}
-*/
-import java.util.\ifunction {
-    Supplier
-}
+
 import java.lang {
-    JString = String,
+    JString=String,
     System,
     Void
 }
+import java.util.\ifunction {
+    Supplier
+}
+
 import org.apache.logging.log4j {
     LogManager,
     Level,
-    Log4jLogger = Logger,
+    Log4jLogger=Logger,
     Marker,
     MarkerManager
-}
-import io.vertx.core.logging {
-    LoggerFactory
-}
-import ceylon.interop.java {
-    javaClass
 }
 
 Logger log = logger(`package`);
