@@ -1,7 +1,7 @@
 native("jvm") module org.otherone.vhostproxy.vertx "4" {
     //shared import io.vertx.ceylon.core "3.4.0";
 
-    shared import maven:io.nitor.api:"backend" "1.8-SNAPSHOT";
+    shared import maven:io.nitor.api:"backend" "1.9";
 
     shared import maven:io.vertx:"vertx-core" "3.4.1";
     shared import maven:io.vertx:"vertx-web" "3.4.1";

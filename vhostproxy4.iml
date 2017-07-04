@@ -36,7 +36,7 @@
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.netty:netty-resolver/4.1.9.Final" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.netty:netty-resolver-dns/4.1.9.Final" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.netty:netty-transport/4.1.9.Final" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.nitor.api:backend/1.8-SNAPSHOT" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.nitor.api:backend/1.9" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.vertx:vertx-core/3.4.1" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.vertx:vertx-web/3.4.1" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: org.apache.logging.log4j:log4j-1.2-api/2.8.2" level="project" />

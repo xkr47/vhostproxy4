@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Ceylon: io.nitor.api:backend/1.9">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../.m2/repository/io/nitor/api/backend/1.9/backend-1.9.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/../.m2/repository/io/nitor/api/backend/1.9/backend-1.9-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
