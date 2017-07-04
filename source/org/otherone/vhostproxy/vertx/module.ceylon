@@ -37,4 +37,5 @@ native("jvm") module org.otherone.vhostproxy.vertx "4" {
     //import "it.zero11:acme-client" "0.1.2";
     import ceylon.file "1.3.2";
     import ceylon.buffer "1.3.2";
+    import ceylon.interop.java "1.3.2";
 }

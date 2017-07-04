@@ -76,7 +76,16 @@ import java.lang {
 }
 import org.apache.logging.log4j {
     LogManager,
-    Level
+    Level,
+    Log4jLogger = Logger,
+    Marker,
+    MarkerManager
+}
+import io.vertx.core.logging {
+    LoggerFactory
+}
+import ceylon.interop.java {
+    javaClass
 }
 
 Logger log = logger(`package`);
@@ -159,193 +168,33 @@ shared class RejectReason of incomingRequestFail | outgoingRequestFail | incomin
     shared new incomingResponseFail {}
     shared new noHostHeader {}
 }
-/*
-class ProxyService(HttpClient client, Boolean isTls, Vertx myVertx) {
-    Set<String> hopByHopHeaders = HashSet<String>{ elements = {
-        Names.\iCONNECTION,
-        "Keep-Alive",
-        Names.\iPROXY_AUTHENTICATE,
-        Names.\iPROXY_AUTHORIZATION,
-        Names.\iTE,
-        Names.\iTRAILER,
-        Names.\iTRANSFER_ENCODING,
-        Names.\iUPGRADE
-    };};
 
-    Regex connectionHeaderValueRE = regex("""\s*,[\s,]*+"""); // from RFC2616
+class MyLogProxyTracer() extends SimpleLogProxyTracer() {
 
-    value keepAliveHeaderValue = "timeout=``serverIdleTimeout``";
+    variable String? first = null;
+    variable Marker? marker = null;
+    Log4jLogger logger = LogManager.getLogger(javaClass<MyLogProxyTracer>());
 
-    void copyEndToEndHeaders(MultiMap from, MultiMap to) {
-        to.addAll(from);
-        for (name in hopByHopHeaders) {
-            to.remove(name);
-        }
-
-        value connectionHeader = from.get(Names.\iCONNECTION);
-        /*
-         Set<String> requestHopByHopHeaders = if (exists connectionHeader)
-         then HashSet<String>{ elements = connectionHeaderValueRE.split(connectionHeader.trimmed); }
-         else emptySet;
-         for (name in requestHopByHopHeaders) {
-         to.remove(name);
-         }
-         */
-        if (exists connectionHeader) {
-            for (name in connectionHeaderValueRE.split(connectionHeader.trimmed)) {
-                to.remove(name);
-            }
-        }
+    shared actual void incomingRequestStart(RoutingContext ctx, Boolean isTls, Boolean isHTTP2, String chost, String reqId) {
+        this.ctx = ctx;
+        this.reqId = reqId;
+        value prefix = this.incomingRequestMsgPrefix(isTls, isHTTP2, chost);
+        value f = this.first = prefix + this.dumpSReq(ctx.request(), "");
+        trace(LogType.sreq, f, null);
     }
 
-    String dumpHeaders(MultiMap h, String indent) {
-        value sb = StringBuilder();
-        for (name in h.names()) {
-            sb.append("\n").append(indent).append(name).append(": ").append(h.getAll(name).reduce((String partial, String element) => partial + "\n" + indent + "  " + element) else "");
-        }
-        return sb.string;
+    shared actual void nextHopResolved(Proxy.Target nextHop) {
+        super.nextHopResolved(nextHop);
+        marker = MarkerManager.getMarker(nextHop.hostHeader); // TODO .logBase should be transported here
+        assert(exists f = first);
+        trace(LogType.sreq, f, null);
     }
 
-    String dumpCReq(HttpClientRequest req) => "\n" + req.method().name + " " + req.uri() + dumpHeaders(req.headers(), "");
-    String dumpSReq(HttpServerRequest req, String indent) => "\n" + indent + req.method().name + " " + req.uri() + " " + req.version().name + dumpHeaders(req.headers(), indent);
-    String dumpCRes(HttpClientResponse res) => "\n" + res.statusCode().string + " " + res.statusMessage() + dumpHeaders(res.headers(), "");
-    String dumpSRes(HttpServerResponse res, String indent) => "\n" + indent + res.getStatusCode().string + " " + res.getStatusMessage() + dumpHeaders(res.headers(), indent);
-
-    object requestId {
-        variable Integer prevRequestId = 0;
-        value requestIdLock = ReentrantLock();
-        shared Integer next() {
-            value now = system.milliseconds;
-            try (requestIdLock) {
-                if (now <= prevRequestId) {
-                    return ++prevRequestId;
-                } else {
-                    return prevRequestId = now;
-                }
-            }
-        }
-    }
-/*
-    abstract class LogType(shared String str) of ltSreq | ltCreq | ltCres | ltSres | ltReqbody | ltResbody {}
-    object ltSreq extends LogType(">| ") {}
-    */
-
-    shared void requestHandler(HttpServerRequest sreq) {
-        value reqId = requestId.next().string;
-        variable AsyncFile? logFile = null;
-        void trace(LogType logType, String msg, Throwable? t = null) {
-            if (exists f = logFile) {
-                value infix = "\n" + reqId + " " + LogType.none.str + " ";
-                try (logLock) {
-                    f.write(buffer.buffer(reqId + " " + logType.str + " " + system.milliseconds.string + " " + msg.split((ch) => ch == '\n').reduce((String a,n) => a + infix+ n) + "\n", "UTF-8"));
-                }
-            } else {
-                log.trace("``reqId`` ``msg``", t);
-            }
-        }
-        value chost = sreq.remoteAddress().host();
-        value reqLogInfix = "Incoming ``isTls then "HTTPS " else ""``request from ``chost``:";
-        log.trace("``reqId`` ``reqLogInfix````dumpSReq(sreq, "\t")``");
-
-        // NOTE: this handler is replaced later
-        sreq.endHandler(() {
-            trace(LogType.sreq, "Incoming request complete");
-        });
-        value sres = sreq.response();
-        sres.headers().add("Keep-Alive", keepAliveHeaderValue);
-        sres.headers().add(Names.\iCONNECTION, "keep-alive");
-        sres.exceptionHandler((Throwable t) {
-            trace(LogType.sres, "Outgoing response fail", t);
-        });
-        sres.headersEndHandler(() {
-            trace(LogType.sres, "Outgoing response final ``dumpSRes(sres, logFile exists then "" else "\t")``");
-        });
-        sres.bodyEndHandler(() {
-            trace(LogType.sres, "Outgoing response complete");
-        });
-        sreq.exceptionHandler(tc((Throwable t) {
-            trace(LogType.sreq, "Incoming request fail", t);
-            fail(sreq, 500, RejectReason.incomingRequestFail, t.message);
-        }));
-/*        if (sreq.version() != http_1_1) {
-            fail(505, "Only HTTP/1.1 supported");
-            return;
-        }*/
-        value nextHop = resolveNextHop(sreq, isTls);
-        if (! exists nextHop) {
-            // in this case the resolveNextHop takes care of sending the response
-            return;
-        }
-        value logFile2 = logFile = logFiles.get(nextHop.logBase, myVertx);
-        trace(LogType.sreq, "``reqLogInfix````dumpSReq(sreq, "")``");
-
-        value sreqh = sreq.headers();
-        value origHost = sreqh.get("Host");
-        if (! exists origHost) {
-            fail(sreq, 400, RejectReason.noHostHeader);
-            return;
-        }
-        value creq = client.request(sreq.method(), nextHop.socketPort, nextHop.socketHost, nextHop.uri);
-        creq.handler(tc((HttpClientResponse cres) {
-            trace(LogType.cres, "Incoming response ``dumpCRes(cres)``");
-            cres.exceptionHandler((Throwable t) {
-                trace(LogType.cres, "Incoming response fail", t);
-                fail(sreq, 502, RejectReason.incomingResponseFail, t.message);
-            });
-
-            sres.setStatusCode(cres.statusCode());
-            sres.setStatusMessage(cres.statusMessage());
-            value headers = cres.headers();
-            copyEndToEndHeaders(headers, sres.headers());
-            sres.headers().add("Keep-Alive", keepAliveHeaderValue);
-            sres.headers().add(Names.\iCONNECTION, "keep-alive");
-            if (!headers.contains(Names.\iCONTENT_LENGTH)) {
-                sres.setChunked(true);
-            }
-            trace(LogType.sres, "Outgoing response initial ``dumpSRes(sres, "")``");
-
-            value resPump = MyPump(logFile2, reqId, LogType.resbody, "Response body", cres, sres, dumpResponseBody);
-            cres.endHandler(tc0(() {
-                trace(LogType.cres, "Incoming response complete");
-                return sres.end();
-            }));
-            resPump.start();
-            trace(LogType.resbody, "Incoming response body");
-        }));
-        creq.exceptionHandler(tc((Throwable t) {
-            trace(LogType.creq, "Outgoing request fail", t);
-            value msg = t.message.startsWith("connection timed out:") then "connection timed out" else t.message;
-            fail(sreq, 502, RejectReason.outgoingRequestFail, msg);
-        }));
-        value creqh = creq.headers();
-        copyEndToEndHeaders(sreqh, creqh);
-        creqh.set("Host", nextHop.hostHeader);
-        creqh.set("X-Host", origHost);
-        creqh.set("X-Forwarded-For", chost);
-        creqh.set("X-Forwarded-Proto", isTls then "https" else "http");
-        value transferEncoding = sreqh.get(Names.\iTRANSFER_ENCODING);
-        if (exists transferEncoding, transferEncoding.contains("chunked")) {
-            creq.setChunked(true);
-        }
-        trace(LogType.creq, "Outgoing request (initial) to ``nextHop.socketHost``:``nextHop.socketPort``:``dumpCReq(creq)``");
-        variable value finalRequestDumped = false;
-        void dumpFinalRequest() {
-            if (!finalRequestDumped) {
-                finalRequestDumped = true;
-                trace(LogType.creq, "Outgoing request final:``dumpCReq(creq)``");
-            }
-        }
-        value reqPump = MyPump(logFile2, reqId, LogType.reqbody, "Request body", sreq, creq, dumpRequestBody, dumpFinalRequest);
-        sreq.endHandler(tc0(() {
-            creq.end();
-            dumpFinalRequest();
-            trace(LogType.sreq, "Incoming request complete");
-        }));
-        trace(LogType.reqbody, "Incoming request body");
-        reqPump.start();
+    shared actual void trace(SimpleLogProxyTracer.LogType logType, String msg, Throwable? t) {
+        logger.trace(marker, logType.graphic + " [" + reqId + "] " + msg, t);
     }
 }
-*/
+
 "Run the module `org.otherone.vhostproxy`."
 shared void run() {
     setupLogging();
@@ -420,7 +269,7 @@ shared class MyVerticle() extends AbstractVerticle() {
             }
         }
         Proxy proxy = Proxy(client, targetResolver, serverIdleTimeout, 300, object satisfies Supplier<ProxyTracer> {
-            get() => SimpleLogProxyTracer();
+            get() => MyLogProxyTracer();
         }, Proxy.DefaultPumpStarter());
         router.route().handler(proxy.handle);
         router.route().failureHandler(object satisfies Handler<RoutingContext> {
