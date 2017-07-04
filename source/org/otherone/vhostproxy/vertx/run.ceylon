@@ -90,8 +90,6 @@ import ceylon.interop.java {
 
 Logger log = logger(`package`);
 /*
-ReentrantLock logLock = ReentrantLock();
-
 class MyPump<T>(AsyncFile logFile, String reqId, LogType logType, String type, ReadStream<T> readStream, WriteStream<T> writeStream, Boolean dumpBody, Anything()? firstBufferWrittenHandler = null) given T satisfies Buffer {
     void dataHandler(T data) {
         writeStream.write(data);
@@ -124,23 +122,6 @@ class MyPump<T>(AsyncFile logFile, String reqId, LogType logType, String type, R
         readStream.handler(tc(dataHandler));
     }
 }
-
-object logFiles {
-    MutableMap<String, AsyncFile> logs = HashMap<String, AsyncFile>();
-    shared AsyncFile get(String logBase, Vertx myVertx) {
-        value log = logs.get(logBase);
-        if (exists log) {
-            return log;
-        }
-        value logFile = "logs/``logBase``";
-        value log2 = myVertx.fileSystem().openBlocking(logFile, OpenOptions { create = true; read = false; write = true; truncateExisting = false; });
-        value logProps = myVertx.fileSystem().propsBlocking(logFile);
-        log2.setWritePos(logProps.size());
-        log2.write(buffer.buffer("-----------------------------------------------------\n", "UTF-8"));
-        logs.put(logBase, log2);
-        return log2;
-    }
-}
 */
 class Target (
     shared String socketHost,
@@ -149,19 +130,7 @@ class Target (
     shared String hostHeader,
     shared String logBase
 ){}
-/*
-class LogType of sreq | creq | cres | sres | reqbody | resbody | none {
-    shared String str;
-    shared new sreq { str = ">| "; }
-    shared new creq { str = " |>"; }
-    shared new cres { str = " |<"; }
-    shared new sres { str = "<| "; }
-    shared new reqbody { str = ">>>"; }
-    shared new resbody { str = "<<<"; }
-    shared new none { str = "   "; }
-    assert(str.size == 3);
-}
-*/
+
 shared class RejectReason of incomingRequestFail | outgoingRequestFail | incomingResponseFail | noHostHeader {
     shared new incomingRequestFail {}
     shared new outgoingRequestFail {}
