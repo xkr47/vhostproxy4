@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Ceylon: io.nitor.vertx:vertx-acme4j/0.1-SNAPSHOT">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/io/nitor/vertx/vertx-acme4j/0.1-SNAPSHOT/vertx-acme4j-0.1-SNAPSHOT.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../.m2/repository/io/nitor/vertx/vertx-acme4j/0.1-SNAPSHOT/vertx-acme4j-0.1-SNAPSHOT.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/io/nitor/vertx/vertx-acme4j/0.1-SNAPSHOT/vertx-acme4j-0.1-SNAPSHOT-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../.m2/repository/io/nitor/vertx/vertx-acme4j/0.1-SNAPSHOT/vertx-acme4j-0.1-SNAPSHOT-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

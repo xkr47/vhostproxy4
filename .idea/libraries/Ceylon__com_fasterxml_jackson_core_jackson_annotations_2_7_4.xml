@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Ceylon: com.fasterxml.jackson.core:jackson-annotations/2.7.4">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.7.4/jackson-annotations-2.7.4.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/../.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.7.4/jackson-annotations-2.7.4-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

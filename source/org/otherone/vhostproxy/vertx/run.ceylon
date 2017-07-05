@@ -57,6 +57,14 @@ import org.apache.logging.log4j {
     Marker,
     MarkerManager
 }
+import io.nitor.vertx.acme4j.util {
+    DynamicCertOptions,
+    SetupHttpServerOptions,
+    DynamicCertManager
+}
+import io.nitor.vertx.acme4j {
+    AcmeManager
+}
 
 Logger log = logger(`package`);
 
@@ -146,6 +154,9 @@ shared void run() {
     // TODO test responses without body e.g. 204
     value myVertx = Vertx.vertx();
     value verticle = MyVerticle();
+    myVertx.exceptionHandler((e) {
+        log.error("Fallback exception handler got", e);
+    });
     myVertx.deployVerticle(verticle, DeploymentOptions(), object satisfies Handler<AsyncResult<JString>> {
         shared actual void handle(AsyncResult<JString> ar) {
             if (ar.succeeded()) {
@@ -248,49 +259,55 @@ shared class MyVerticle() extends AbstractVerticle() {
         });
 
         vertx.createHttpServer(HttpServerOptions()
-            //.setCompressionSupported(true)
             // .setHandle100ContinueAutomatically(false)
             .setReuseAddress(true)
+            .setCompressionSupported(false) // otherwise it automatically compresses based on response headers even if pre-compressed with e.g. proxy
+            .setUsePooledBuffers(true)
             .setIdleTimeout(serverIdleTimeout)
         )
             .requestHandler(router.accept)
             .listen(portConfig.listenHttpPort, object satisfies Handler<AsyncResult<HttpServer>> {
             shared actual void handle(AsyncResult<HttpServer> ar) {
                 if (ar.succeeded()) {
-                    log.info("HTTP Started on port ``portConfig.listenHttpPort``, sample public url: http://localhost:``portConfig.publicHttpPort``/");
+                    log.info("HTTP started on port ``portConfig.listenHttpPort``, sample public url: http://localhost:``portConfig.publicHttpPort``/");
                 } else {
                     log.error("HTTP failed on port ``portConfig.listenHttpPort``", ar.cause());
                 }
             }
         });
 
-        /*
-           tc(ProxyService(client, false, vertx).requestHandler))
-         */
-        /*
-        String? keystorePassword;
-        "Password file not found" assert (is File keystorePasswordFile = parsePath("keystore-password").resource);
-        try (keystorePasswordFileReader = keystorePasswordFile.Reader("UTF-8")) {
-            keystorePassword = keystorePasswordFileReader.readLine();
-        }
-        "Password file was empty" assert (exists keystorePassword);
-        vertx.createHttpServer(HttpServerOptions {
-            compressionSupported = true;
-            // handle100ContinueAutomatically = false;
-            reuseAddress = true;
-            idleTimeout = serverIdleTimeout;
-            ssl = true;
-            keyStoreOptions = JksOptions { password = keystorePassword; path = "keystore"; };
-        }).requestHandler(tc(ProxyService(client, true, vertx).requestHandler)).listen(portConfig.listenHttpsPort, (HttpServer|Throwable res) {
-            if (is HttpServer res) {
-                log.info("HTTPS Started on port ``portConfig.listenHttpsPort``, sample public url: https://localhost:``portConfig.publicHttpsPort``/ .");
-            } else {
-                log.error("HTTPS failed on port ``portConfig.listenHttpPort``", res);
+        // TLS
+
+        value dynamicCertOptions = DynamicCertOptions();
+        value certManager = DynamicCertManager(vertx, dynamicCertOptions);
+        value httpServerOptions = SetupHttpServerOptions.createHttpServerOptions(dynamicCertOptions)
+            .setIdleTimeout(serverIdleTimeout);
+        vertx.createHttpServer(httpServerOptions)
+            .requestHandler(object satisfies Handler<HttpServerRequest> {
+            shared actual void handle(HttpServerRequest request) {
+                router.accept(request);
+            }
+        })
+            .listen(portConfig.listenHttpsPort, object satisfies Handler<AsyncResult<HttpServer>> {
+            shared actual void handle(AsyncResult<HttpServer> ar) {
+                if (ar.succeeded()) {
+                    log.info("HTTPS started on port ``portConfig.listenHttpsPort``, sample public url: https://localhost:``portConfig.publicHttpsPort``/");
+                } else {
+                    log.error("HTTPS failed on port ``portConfig.listenHttpsPort``", ar.cause());
+                    return;
+                }
+                value acmeMgr = AcmeManager(vertx, certManager, ".acmemanager");
+                acmeMgr.readConf("acme.json", "conf").compose((conf) => acmeMgr.start(conf)).setHandler((ar) {
+                    if (ar.failed()) {
+                        log.error("AcmeManager start failed", ar.cause());
+                        return;
+                    }
+                    log.info("AcmeManager start successful");
+                }
+                );
             }
         });
-        */
+
         log.info("Startup initialized.");
     }
 }
-
-
