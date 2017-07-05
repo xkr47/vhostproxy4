@@ -4,9 +4,13 @@ native("jvm") module org.otherone.vhostproxy.vertx "4" {
     shared import maven:io.nitor.api:"backend" "1.9";
 
     import maven:io.nitor.vertx:"vertx-acme4j" "0.1-SNAPSHOT";
-    import maven:org.mortbay.jetty.alpn:"jetty-alpn-agent" "2.0.6";
-    //import maven:com.fasterxml.jackson.datatype:"jackson-datatype-jsr310" "2.8.8";
-    import maven:com.fasterxml.jackson.core:"jackson-databind" "2.7.4";
+    shared import maven:org.mortbay.jetty.alpn:"jetty-alpn-agent" "2.0.6";
+    shared import maven:com.fasterxml.jackson.datatype:"jackson-datatype-jsr310" "2.8.8";
+    shared import maven:com.fasterxml.jackson.core:"jackson-databind" "2.8.8";
+    shared import maven:com.fasterxml.jackson.core:"jackson-core" "2.8.8";
+    shared import maven:com.fasterxml.jackson.core:"jackson-annotations" "2.8.0";
+    shared import maven:org.shredzone.acme4j:"acme4j-client" "0.9";
+    shared import maven:org.shredzone.acme4j:"acme4j-utils" "0.9";
 
     shared import maven:io.vertx:"vertx-core" "3.4.1";
     shared import maven:io.vertx:"vertx-web" "3.4.1";

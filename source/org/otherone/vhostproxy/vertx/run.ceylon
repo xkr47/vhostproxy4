@@ -44,7 +44,8 @@ import io.vertx.ext.web {
 import java.lang {
     JString=String,
     System,
-    Void
+    Void,
+    RuntimeException
 }
 import java.util.\ifunction {
     Supplier
@@ -64,6 +65,18 @@ import io.nitor.vertx.acme4j.util {
 }
 import io.nitor.vertx.acme4j {
     AcmeManager
+}
+import com.fasterxml.jackson.datatype.jsr310 {
+    JavaTimeModule
+}
+import com.fasterxml.jackson.databind.\imodule {
+    SimpleModule
+}
+import com.fasterxml.jackson.databind {
+    Module
+}
+import com.fasterxml.jackson.core {
+    Version
 }
 
 Logger log = logger(`package`);
@@ -280,7 +293,7 @@ shared class MyVerticle() extends AbstractVerticle() {
 
         value dynamicCertOptions = DynamicCertOptions();
         value certManager = DynamicCertManager(vertx, dynamicCertOptions);
-        value httpServerOptions = SetupHttpServerOptions.createHttpServerOptions(dynamicCertOptions)
+        value httpServerOptions = SetupHttpServerOptions.createHttpServerOptions(dynamicCertOptions, true)
             .setIdleTimeout(serverIdleTimeout);
         vertx.createHttpServer(httpServerOptions)
             .requestHandler(object satisfies Handler<HttpServerRequest> {
@@ -296,6 +309,13 @@ shared class MyVerticle() extends AbstractVerticle() {
                     log.error("HTTPS failed on port ``portConfig.listenHttpsPort``", ar.cause());
                     return;
                 }
+
+                object xx extends Module() {
+                    shared actual String moduleName => nothing;
+                    shared actual void setupModule(Module.SetupContext? context) {}
+                    shared actual Version version() => nothing;
+                }
+
                 value acmeMgr = AcmeManager(vertx, certManager, ".acmemanager");
                 acmeMgr.readConf("acme.json", "conf").compose((conf) => acmeMgr.start(conf)).setHandler((ar) {
                     if (ar.failed()) {
