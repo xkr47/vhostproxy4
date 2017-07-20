@@ -260,16 +260,8 @@ shared void run() {
     //process.exit(0);
 
 
-
-
     //JBModule.moduleLogger = StreamModuleLogger(System.\iout);
-/*
-    object xx extends Module() {
-        shared actual String moduleName => nothing;
-        shared actual void setupModule(Module.SetupContext? context) {}
-        shared actual Version version() => nothing;
-    }
-*/
+
     setupLogging();
     log.info("Starting..");
 
@@ -420,13 +412,7 @@ shared class MyVerticle() extends AbstractVerticle() {
                     log.error("HTTPS failed on port ``portConfig.listenHttpsPort``", ar.cause());
                     return;
                 }
-/*
-                object xx extends Module() {
-                    shared actual String moduleName => nothing;
-                    shared actual void setupModule(Module.SetupContext? context) {}
-                    shared actual Version version() => nothing;
-                }
-*/
+
                 value acmeMgr = AcmeManager(vertx, certManager, ".acmemanager");
                 acmeMgr.readConf("acme.json", "conf").compose((conf) => acmeMgr.start(conf)).setHandler((ar) {
                     if (ar.failed()) {
