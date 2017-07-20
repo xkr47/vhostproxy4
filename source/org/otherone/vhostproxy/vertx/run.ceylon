@@ -3,7 +3,8 @@ import ceylon.file {
     File
 }
 import ceylon.interop.java {
-    javaClass
+    javaClass,
+    javaClassFromInstance
 }
 import ceylon.logging {
     logger,
@@ -58,25 +59,32 @@ import org.apache.logging.log4j {
     Marker,
     MarkerManager
 }
-import io.nitor.vertx.acme4j.util {
+import space.xkr47.vertx.acme4j.util {
     DynamicCertOptions,
     SetupHttpServerOptions,
     DynamicCertManager
 }
-import io.nitor.vertx.acme4j {
+import space.xkr47.vertx.acme4j {
     AcmeManager
 }
-import com.fasterxml.jackson.datatype.jsr310 {
-    JavaTimeModule
+import org.jboss.modules {
+    JBModule = Module
 }
-import com.fasterxml.jackson.databind.\imodule {
-    SimpleModule
+import org.jboss.modules.log {
+    StreamModuleLogger
 }
-import com.fasterxml.jackson.databind {
-    Module
+import ceylon.language.meta.declaration {
+    Import,
+    CModule = Module
 }
-import com.fasterxml.jackson.core {
-    Version
+import ceylon.language.meta {
+    modules
+}
+import ceylon.collection {
+    MutableList,
+    ArrayList,
+    HashSet,
+    MutableSet
 }
 
 Logger log = logger(`package`);
@@ -160,8 +168,110 @@ class MyLogProxyTracer() extends SimpleLogProxyTracer() {
 
 "Run the module `org.otherone.vhostproxy`."
 shared void run() {
+    class Dep(shared Import imp) {
+        shared late CModule? mod = modules.find(imp.name, imp.version);
+    }
+    [Dep*] deps2(CModule mod) => mod.dependencies.collect((dep) => Dep(dep));
+
+    {[CModule, Import]*} deps(CModule mod) => mod.dependencies
+        .flatMap((dep) {
+        if (exists depmod = modules.find(dep.name, dep.version)) {
+            return [[depmod, dep]];
+        } else {
+            if (!dep.optional) {
+                print("WARN: CModule ``dep.name`` ``dep.version`` not found");
+            }
+            return [];
+        }
+    });
+
+    void dumpMods(CModule mod, String meta = "", [CModule*] seen = [], String indent = "", MutableSet<CModule> allSeen = HashSet<CModule>()) {
+        if (mod.name == "ceylon.language") {
+            //return;
+        }
+        value base = indent + meta + mod.string;
+        value doPrint = base.contains("alpn");
+        value alwaysPrint = base.contains("log4j-");
+        if (seen.contains(mod)) {
+            if (doPrint) { print(base + " (loop)"); }
+            return;
+        }
+        if (!alwaysPrint && allSeen.contains(mod)) {
+            if (doPrint) { print(base + " (seen)"); }
+            return;
+        }
+        allSeen.add(mod);
+        if (doPrint) { print(base); }
+        if (mod.name.startsWith("ceylon.")) {
+            //return;
+        }
+        /*
+        if (!seen.empty) {
+            return;
+        }
+        */
+        value subIndent = indent + "  ";
+        value subSeen = seen.withTrailing(mod);
+        for(value dep in deps(mod)) {
+            dumpMods(dep[0], "``dep[1].shared then "Ж" else "·"`` ``dep[1].optional then "[]" else ""``", subSeen, subIndent, allSeen);
+        }
+    }
+
+    MutableList<CModule->Import> moduleRelations(
+            String interestName,
+            CModule mod,
+            MutableSet<CModule> allSeen = HashSet<CModule>(),
+            MutableList<CModule->Import> allDeps = ArrayList<CModule->Import>()
+            ) {
+        if (mod.name == "ceylon.language") {
+            //return;
+        }
+        if (allSeen.contains(mod)) {
+            return allDeps;
+        }
+        allSeen.add(mod);
+        value modDeps = deps2(mod);
+        if (mod.name == interestName) {
+            allDeps.addAll(modDeps.map((dep) => mod->dep.imp));
+        } else {
+            allDeps.addAll(modDeps.filter((dep) => dep.imp.name == interestName).map((dep) => mod->dep.imp));
+        }
+        for(value depMod in modDeps.map((dep) => dep.mod).coalesced) {
+            moduleRelations(interestName, depMod, allSeen, allDeps);
+        }
+        return allDeps;
+    }
+
+    print("· = private, Ж = shared, [] = optional");
+    //dumpMods(`module`);
+    /*
+    print("---------------------------\n");
+    print(moduleRelations(
+    //    "org.eclipse.jetty.osgi:jetty-osgi-alpn"
+//        "io.netty:netty-handler"
+        //"com.fasterxml.jackson.datatype:jackson-datatype-jsr310"
+        "com.fasterxml.jackson.core:jackson-databind"
+    , `module`).map((dep) {
+        //return javaClassFromInstance(dep.item).string;
+        return dep.item.string;
+    }).reduce((String a,String b) => a + "\n" + b));
+    // */
+    print("---------------------------\n");
+    //process.exit(0);
+
+
+
+
+    //JBModule.moduleLogger = StreamModuleLogger(System.\iout);
+/*
+    object xx extends Module() {
+        shared actual String moduleName => nothing;
+        shared actual void setupModule(Module.SetupContext? context) {}
+        shared actual Version version() => nothing;
+    }
+*/
     setupLogging();
-    log.info("Starting..    ");
+    log.info("Starting..");
 
     // TODO timeouts
     // TODO test responses without body e.g. 204
@@ -170,6 +280,7 @@ shared void run() {
     myVertx.exceptionHandler((e) {
         log.error("Fallback exception handler got", e);
     });
+
     myVertx.deployVerticle(verticle, DeploymentOptions(), object satisfies Handler<AsyncResult<JString>> {
         shared actual void handle(AsyncResult<JString> ar) {
             if (ar.succeeded()) {
@@ -309,13 +420,13 @@ shared class MyVerticle() extends AbstractVerticle() {
                     log.error("HTTPS failed on port ``portConfig.listenHttpsPort``", ar.cause());
                     return;
                 }
-
+/*
                 object xx extends Module() {
                     shared actual String moduleName => nothing;
                     shared actual void setupModule(Module.SetupContext? context) {}
                     shared actual Version version() => nothing;
                 }
-
+*/
                 value acmeMgr = AcmeManager(vertx, certManager, ".acmemanager");
                 acmeMgr.readConf("acme.json", "conf").compose((conf) => acmeMgr.start(conf)).setHandler((ar) {
                     if (ar.failed()) {

@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="Ceylon: org.jboss.modules/1.4.4.Final">
+    <CLASSES>
+      <root url="jar://$APPLICATION_PLUGINS_DIR$/CeylonIDEA/classes/embeddedDist/repo/org/jboss/modules/1.4.4.Final/org.jboss.modules-1.4.4.Final.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

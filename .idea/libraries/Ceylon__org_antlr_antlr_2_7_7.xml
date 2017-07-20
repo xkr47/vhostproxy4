@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="Ceylon: org.antlr.antlr/2.7.7">
-    <CLASSES>
-      <root url="jar://$APPLICATION_PLUGINS_DIR$/CeylonIDEA/classes/embeddedDist/repo/org/antlr/antlr/2.7.7/org.antlr.antlr-2.7.7.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>
