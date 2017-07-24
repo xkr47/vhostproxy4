@@ -26,7 +26,6 @@ native("jvm") module org.otherone.vhostproxy.vertx "4.1" {
     import maven:org.apache.logging.log4j:"log4j-core" "2.8.2";
     import maven:org.apache.logging.log4j:"log4j-1.2-api" "2.8.2";
     import maven:org.apache.logging.log4j:"log4j-jcl" "2.8.2";
-    import maven:org.apache.logging.log4j:"log4j-slf4j-impl" "2.8.2";
     import maven:org.apache.logging.log4j:"log4j-jul" "2.8.2";
 
 //    import maven:org.eclipse.jetty.osgi:"jetty-osgi-alpn" "9.4.6.v20170531";

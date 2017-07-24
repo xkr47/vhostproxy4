@@ -253,7 +253,9 @@ shared void run() {
     //    "org.eclipse.jetty.osgi:jetty-osgi-alpn"
 //        "io.netty:netty-handler"
         //"com.fasterxml.jackson.datatype:jackson-datatype-jsr310"
-        "com.fasterxml.jackson.core:jackson-databind"
+//        "com.fasterxml.jackson.core:jackson-databind"
+//        "org.slf4j:slf4j-api"
+        "org.apache.logging.log4j:log4j-api"
     , `module`).map((dep) {
         //return javaClassFromInstance(dep.item).string;
         return dep.item.string;

@@ -2,6 +2,7 @@
     <set module="ceylon.collection" version="1.3.2"/>
     <set groupId="io.netty" artifactId="netty-common" version="4.1.9.Final"/>
     <set groupId="org.apache.logging.log4j" artifactId="log4j-api" version="2.8.2"/>
+    <set groupId="org.slf4j" artifactId="slf4j-api" version="1.7.24"/>
 
     <set groupId="io.netty" artifactId="netty-common" version="4.1.9.Final"/>
     <set groupId="io.netty" artifactId="netty-buffer" version="4.1.9.Final"/>
@@ -32,4 +33,8 @@
     <artifact groupId="io.netty" artifactId="netty-handler" version="4.1.9.Final">
         <add groupId="org.mortbay.jetty.alpn" artifactId="alpn-boot" version="8.1.11.v20170118"/>
     </artifact>
+    <artifact groupId="org.slf4j" artifactId="slf4j-api" version="1.7.24">
+        <add groupId="org.apache.logging.log4j" artifactId="log4j-slf4j-impl" version="2.8.2"/>
+    </artifact>
+
 </overrides>
