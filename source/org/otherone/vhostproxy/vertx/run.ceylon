@@ -48,6 +48,9 @@ import java.lang {
     Void,
     RuntimeException
 }
+import java.util {
+    Arrays
+}
 import java.util.\ifunction {
     Supplier
 }
@@ -414,7 +417,50 @@ shared class MyVerticle() extends AbstractVerticle() {
                 }
 
                 value acmeMgr = AcmeManager(vertx, certManager, ".acmemanager");
-                acmeMgr.readConf("acme.json", "conf").compose((conf) => acmeMgr.start(conf)).setHandler((ar) {
+                acmeMgr.readConf("acme.json", "conf").compose((baseConf) {
+                    return getAcmeConf().compose((nhAccounts) {
+                        // check
+                        nhAccounts.each((nhAccount->nhCerts) {
+                            value baseAccount = baseConf.accounts[JString(nhAccount)];
+                            if (!exists baseAccount) {
+                                throw Exception("Account ``nhAccount`` requested by getAcmeConf() not found");
+                            }
+                            if (!baseAccount.enabled) {
+                                log.info("Account ``nhAccount`` disabled => hosts disabled: ``nhCerts.items.flatMap((hosts) => hosts)``");
+                                return;
+                            }
+                            nhCerts.each((nhCert->nhHosts) {
+                                value baseCertificate = baseAccount.certificates[JString(nhCert)];
+                                if (!exists baseCertificate) {
+                                    throw Exception("Certifiate ``nhCert`` of account ``nhAccount`` requested by getAcmeConf() not found");
+                                }
+                                if (!baseCertificate.enabled) {
+                                    log.info("Certificate ``nhCert`` of account ``nhAccount`` disabled => hosts disabled: ``nhHosts``");
+                                }
+                                baseCertificate.hostnames = Arrays.asList(*nhHosts.map((s) => JString(s)));
+                                log.trace("Account ``nhAccount`` certificate ``nhCert`` hostnames ``baseCertificate.hostnames``");
+                            });
+                        });
+                        baseConf.accounts.forEach((baseAccountName, baseAccount) {
+                            value nhCertificates = nhAccounts[baseAccountName.string];
+                            if (exists nhCertificates) {
+                                baseAccount.certificates.forEach((baseCertificateName, baseCertificate) {
+                                    value nhHostnames = nhCertificates[baseCertificateName.string];
+                                    if (!nhHostnames exists, baseCertificate.enabled) {
+                                        log.warn("Certificate ``baseCertificateName`` of account ``baseAccountName`` disabled because not being referenced by getAcmeConf()");
+                                        baseCertificate.enabled = false;
+                                    }
+                                });
+                            } else {
+                                if (baseAccount.enabled) {
+                                    log.warn("Account ``baseAccountName`` disabled because not being referenced by getAcmeConf()");
+                                    baseAccount.enabled = false;
+                                }
+                            }
+                        });
+                        return acmeMgr.start(baseConf);
+                    });
+                }).setHandler((ar) {
                     if (ar.failed()) {
                         log.error("AcmeManager start failed", ar.cause());
                         return;

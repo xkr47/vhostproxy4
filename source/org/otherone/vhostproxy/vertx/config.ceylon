@@ -5,9 +5,14 @@ import ceylon.buffer.charset {
     iso_8859_1,
     utf8
 }
+import ceylon.buffer.codec {
+    strict
+}
 import ceylon.collection {
     HashMap,
-    HashSet
+    HashSet,
+    MutableMap,
+    MutableSet
 }
 import ceylon.file {
     parsePath,
@@ -19,6 +24,9 @@ import io.netty.handler.codec.http {
         Names
     }
 }
+import io.vertx.core {
+    Future
+}
 import io.vertx.core.http {
     HttpServerRequest,
     HttpMethod {
@@ -28,9 +36,7 @@ import io.vertx.core.http {
         patch
     }
 }
-import ceylon.buffer.codec {
-    strict
-}
+
 import java.lang {
     RuntimeException
 }
@@ -54,6 +60,13 @@ String accessGroupFilename = "accessGroups.txt";
 Boolean dumpRequestBody = true;
 Boolean dumpResponseBody = false;
 
+class AcmeCategory (
+    "The name of the account as configured in acme.json"
+    shared String account,
+    "The name of the certificate as configured in acme.json"
+    shared String certificate
+) {}
+
 class NextHop (
     "When the hostname part of the 'Host' header matches, this entry will be used as next hop."
     shared String matchHost,
@@ -74,13 +87,15 @@ class NextHop (
     "If specified, the user is required to basic-authenticate, and will only be let in if the file has a matching 'username:password' line. Lines can be commented with '#'"
     shared String? passwordFile = null,
     "If true, propagate Authorization header to next hop. If passwordFile is null, Authorization header is always propagated."
-    shared Boolean propagatePassword = false
+    shared Boolean propagatePassword = false,
+    "If defined, chooses the certificate to register the `host` with, otherwise it will not be available over https"
+    shared AcmeCategory? httpsCategory = null
 ) {}
 
 "List of next hops which are chosen based on matchHost. These are just examples which forward requests to localhost:8090 with some additional adjustments."
 [NextHop+] nextHops = [
 NextHop { matchHost = "localhost"; host = "localhost"; port = 8090; nextHost = "simpura"; pathPrefix = "/lol"; /* accessGroups = [ "work", "home" ]; */ },
-NextHop { matchHost = "publichost.example.com"; host = "localhost"; port = 8090; pathPrefix = "/lol2"; }
+NextHop { matchHost = "publichost.example.com"; host = "localhost"; port = 8090; pathPrefix = "/lol2"; httpsCategory = AcmeCategory("testaccount", "testcert");}
 ];
 
 Map<String, NextHop> nextHopMap = HashMap<String, NextHop>{ entries = { for(i in nextHops) if (i.enabled) i.matchHost -> i }; };
@@ -242,4 +257,32 @@ Target? resolveNextHop2(HttpServerRequest sreq, Boolean isTls) {
     value nextUri = if (exists prefix = nextHop.pathPrefix) then prefix + sreq.uri() else sreq.uri();
     value logBase = hostname;
     return Target(nextHop.host, nextHop.port, nextUri, nextHop.nextHost, logBase);
+}
+
+V goc<K,V>(MutableMap<K,V> map, K key, V(K) creator) given K satisfies Object given V satisfies Object {
+    if (exists v = map[key]) {
+        return v;
+    }
+    value v = creator(key);
+    map[key] = v;
+    return v;
+}
+
+Future<Map<String, Map<String, {String*}>>> getAcmeConf() {
+    value conf = HashMap<String, MutableMap<String, MutableSet<String>>>();
+    for (value nextHop in nextHops) {
+        if (exists ac = nextHop.httpsCategory) {
+            assert (goc {
+                map = goc {
+                    map = conf;
+                    key = ac.account;
+                    creator(String k) => HashMap<String, MutableSet<String>>();
+                };
+                key = ac.certificate;
+                creator(String k) => HashSet<String>();
+            }.add(nextHop.matchHost));
+        }
+    }
+    print(conf);
+    return Future.succeededFuture(conf of Map<String, Map<String, {String*}>>);
 }
