@@ -128,12 +128,12 @@ class MyPump(Marker? marker, String reqId, MyLogProxyTracer.LogType logType, Str
 }
 
 class Target (
-    shared String socketHost,
-    shared Integer socketPort,
-    shared String uri,
-    shared String hostHeader,
+    String socketHost,
+    Integer socketPort,
+    String uri,
+    String hostHeader,
     shared String logBase
-){}
+) extends Proxy.Target(socketHost, socketPort, uri, hostHeader) {}
 
 shared class RejectReason of incomingRequestFail | outgoingRequestFail | incomingResponseFail | noHostHeader {
     shared new incomingRequestFail {}
@@ -158,8 +158,9 @@ class MyLogProxyTracer() extends SimpleLogProxyTracer() {
     }
 
     shared actual void nextHopResolved(Proxy.Target nextHop) {
+        assert(is Target nextHop);
         super.nextHopResolved(nextHop);
-        marker = MarkerManager.getMarker(nextHop.hostHeader); // TODO .logBase should be transported here
+        marker = MarkerManager.getMarker(nextHop.logBase);
         assert(exists f = first);
         trace(LogType.sreq, f, null);
     }
@@ -347,12 +348,7 @@ shared class MyVerticle() extends AbstractVerticle() {
                     value isTls = if (exists scheme = routingContext.request().scheme()) then scheme == "https" else false;
                     value nextHop = resolveNextHop2(routingContext.request(), isTls);
                     if (exists nextHop) {
-                        targetHandler.handle(Proxy.Target (
-                            nextHop.socketHost,
-                            nextHop.socketPort,
-                            nextHop.uri,
-                            nextHop.hostHeader
-                        ));
+                        targetHandler.handle(nextHop);
                     }
                 } catch (Throwable e) {
                     log.error("Error", e);
