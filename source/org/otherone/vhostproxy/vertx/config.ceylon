@@ -67,23 +67,36 @@ class AcmeCategory (
     shared String certificate
 ) {}
 
+alias TargetResolver => Target(HttpServerRequest, String);
+
+TargetResolver basic(
+        "The hostname/ip of the next hop. Used by default in 'Host' header to next hop, can be overridden by setting `nextHost` explicitly.`"
+        String host,
+        "The port of the next hop. Used by default in 'Host' header to next hop, can be overridden by setting `nextHost` explicitly.`"
+        Integer port,
+        "The 'Host' header value to use in the request to the next hop."
+        String nextHost = port == 80 then host else host + ":" + port.string,
+        "If non-null, the value is prefixed to the path when constructing the request to the next hop."
+        String? pathPrefix = null
+        ) {
+    return (HttpServerRequest sreq, String hostname) {
+        value nextUri = if (exists prefix = pathPrefix) then prefix + sreq.uri() else sreq.uri();
+        value logBase = hostname;
+        return Target(host, port, nextUri, nextHost, logBase);
+    };
+}
+
 class NextHop (
     "When the hostname part of the 'Host' header matches, this entry will be used as next hop."
     shared String matchHost,
-    "The hostname/ip of the next hop. Used by default in 'Host' header to next hop, can be overridden by setting `nextHost` explicitly.`"
-    shared String host,
-    "The port of the next hop. Used by default in 'Host' header to next hop, can be overridden by setting `nextHost` explicitly.`"
-    shared Integer port,
-    "If non-null, the value is prefixed to the path when constructing the request to the next hop."
-    shared String? pathPrefix = null,
+    "The target resolver to use"
+    shared TargetResolver resolver,
     "Use this to enable/disable the rule"
     shared Boolean enabled = true,
     "If true, users entering using HTTP will be redirected to the HTTPS service. If false the user can access the service both with HTTP and HTTPS."
     shared Boolean forceHttps = false,
     "If non-null, it's a list of access groups that are allowed to enter. Access groups are loaded from the file pointed to by `accessGroupFilename`."
     shared String[]? accessGroups = null,
-    "The 'Host' header value to use in the request to the next hop."
-    shared String nextHost = port == 80 then host else host + ":" + port.string,
     "If specified, the user is required to basic-authenticate, and will only be let in if the file has a matching 'username:password' line. Lines can be commented with '#'"
     shared String? passwordFile = null,
     "If true, propagate Authorization header to next hop. If passwordFile is null, Authorization header is always propagated."
@@ -94,8 +107,8 @@ class NextHop (
 
 "List of next hops which are chosen based on matchHost. These are just examples which forward requests to localhost:8090 with some additional adjustments."
 [NextHop+] nextHops = [
-NextHop { matchHost = "localhost"; host = "localhost"; port = 8090; nextHost = "simpura"; pathPrefix = "/lol"; /* accessGroups = [ "work", "home" ]; */ },
-NextHop { matchHost = "publichost.example.com"; host = "localhost"; port = 8090; pathPrefix = "/lol2"; httpsCategory = AcmeCategory("testaccount", "testcert");}
+NextHop { matchHost = "localhost"; resolver = basic { host = "localhost"; port = 8090; nextHost = "simpura"; pathPrefix = "/lol"; }; /* accessGroups = [ "work", "home" ]; */ },
+NextHop { matchHost = "publichost.example.com"; resolver = basic { host = "localhost"; port = 8090; pathPrefix = "/lol2"; }; httpsCategory = AcmeCategory("testaccount", "testcert");}
 ];
 
 Map<String, NextHop> nextHopMap = HashMap<String, NextHop>{ entries = { for(i in nextHops) if (i.enabled) i.matchHost -> i }; };
@@ -254,9 +267,7 @@ Target? resolveNextHop2(HttpServerRequest sreq, Boolean isTls) {
             sreq.headers().remove(Names.\iAUTHORIZATION);
         }
     }
-    value nextUri = if (exists prefix = nextHop.pathPrefix) then prefix + sreq.uri() else sreq.uri();
-    value logBase = hostname;
-    return Target(nextHop.host, nextHop.port, nextUri, nextHop.nextHost, logBase);
+    return nextHop.resolver(sreq, hostname);
 }
 
 V goc<K,V>(MutableMap<K,V> map, K key, V(K) creator) given K satisfies Object given V satisfies Object {
