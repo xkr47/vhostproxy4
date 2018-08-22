@@ -18,8 +18,8 @@ native("jvm") module org.otherone.vhostproxy.vertx "4.1" {
     shared import maven:io.vertx:"vertx-core" "3.4.1";
     shared import maven:io.vertx:"vertx-web" "3.4.1";
 
-    import com.redhat.ceylon.model "1.3.2";
-    import ceylon.runtime "1.3.2";
+    import com.redhat.ceylon.model "1.3.3";
+    import ceylon.runtime "1.3.3";
     import org.jboss.modules "1.4.4.Final";
 
     import maven:org.apache.logging.log4j:"log4j-api" "2.8.2";
@@ -32,16 +32,16 @@ native("jvm") module org.otherone.vhostproxy.vertx "4.1" {
 
     import maven:io.netty:"netty-codec-http" "4.1.9.Final";
 
-    import ceylon.collection "1.3.2";
+    import ceylon.collection "1.3.3";
 
     //shared import "io.vertx:vertx-lang-ceylon" "3.3.0-SNAPSHOT";
     //shared import "io.vertx.lang.ceylon" "3.3.0-SNAPSHOT";
-    import ceylon.regex "1.3.2";
-    import ceylon.logging "1.3.2";
+    import ceylon.regex "1.3.3";
+    import ceylon.logging "1.3.3";
     //import ceylon.time "1.2.1";
     import java.base "8";
     //import "it.zero11:acme-client" "0.1.2";
-    import ceylon.file "1.3.2";
-    import ceylon.buffer "1.3.2";
-    import ceylon.interop.java "1.3.2";
+    import ceylon.file "1.3.3";
+    import ceylon.buffer "1.3.3";
+    //import ceylon.interop.java "1.3.3";
 }

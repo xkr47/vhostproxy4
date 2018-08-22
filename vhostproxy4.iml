@@ -10,7 +10,7 @@
       </configuration>
     </facet>
   </component>
-  <component name="NewModuleRootManager" inherit-compiler-output="false">
+  <component name="NewModuleRootManager">
     <output url="file:///media/truecrypt-xkr47/ceylon/intellij/vhostproxy4/modules" />
     <output-test url="file:///media/truecrypt-xkr47/ceylon/intellij/vhostproxy4/modules" />
     <exclude-output />
@@ -20,19 +20,18 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.buffer/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.collection/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.file/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.interop.java/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.language/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.logging/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.regex/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.runtime/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.cli/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.common/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.langtools.classfile/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.model/1.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.module-resolver/1.3.2" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.buffer/1.3.3" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.collection/1.3.3" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.file/1.3.3" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.language/1.3.3" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.logging/1.3.3" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.regex/1.3.3" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.runtime/1.3.3" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.cli/1.3.3" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.common/1.3.3" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.langtools.classfile/1.3.3" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.model/1.3.3" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.module-resolver/1.3.3" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.netty:netty-codec-http/4.1.9.Final" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.nitor.api:backend/1.9" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: io.vertx:vertx-core/3.4.1" level="project" />

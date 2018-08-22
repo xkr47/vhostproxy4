@@ -2,10 +2,6 @@ import ceylon.file {
     parsePath,
     File
 }
-import ceylon.interop.java {
-    javaClass,
-    javaClassFromInstance
-}
 import ceylon.logging {
     logger,
     Logger,
@@ -46,7 +42,10 @@ import java.lang {
     JString=String,
     System,
     Void,
-    RuntimeException
+    RuntimeException,
+    Types {
+        ...
+    }
 }
 import java.util {
     Arrays
@@ -146,7 +145,7 @@ class MyLogProxyTracer() extends SimpleLogProxyTracer() {
 
     variable String? first = null;
     shared variable Marker? marker = null;
-    shared Log4jLogger loggr = LogManager.getLogger(javaClass<MyLogProxyTracer>());
+    shared Log4jLogger loggr = LogManager.getLogger(classForType<MyLogProxyTracer>());
     shared String getReqId() => reqId;
 
     shared actual void incomingRequestStart(RoutingContext ctx, Boolean isTls, Boolean isHTTP2, String chost, String reqId) {
@@ -258,7 +257,7 @@ shared void run() {
 //        "org.slf4j:slf4j-api"
         "org.apache.logging.log4j:log4j-api"
     , `module`).map((dep) {
-        //return javaClassFromInstance(dep.item).string;
+        //return classForInstance(dep.item).string;
         return dep.item.string;
     }).reduce((String a,String b) => a + "\n" + b));
     // */
@@ -305,7 +304,7 @@ void setupLogging() {
     }
     System.setProperty("java.util.logging.manager", "org.apache.logging.log4j.jul.LogManager");
     System.setProperty("vertx.logger-delegate-factory-class-name", "io.vertx.core.logging.Log4j2LogDelegateFactory");
-    //logger = LogManager.hgetLogger(javaClass<NitorBackend>());
+    //logger = LogManager.hgetLogger(classForType<NitorBackend>());
 }
 
 class MyPumpStarter()

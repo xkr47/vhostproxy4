@@ -2,10 +2,12 @@
   <library name="Ceylon: io.netty:netty-codec-http/4.1.9.Final">
     <CLASSES>
       <root url="jar://$PROJECT_DIR$/../.m2/repository/io/netty/netty-codec-http/4.1.9.Final/netty-codec-http-4.1.9.Final.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/io/netty/netty-codec-http/4.1.9.Final/netty-codec-http-4.1.9.Final.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
       <root url="jar://$PROJECT_DIR$/../.m2/repository/io/netty/netty-codec-http/4.1.9.Final/netty-codec-http-4.1.9.Final-sources.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/io/netty/netty-codec-http/4.1.9.Final/netty-codec-http-4.1.9.Final-sources.jar!/" />
     </SOURCES>
   </library>
 </component>

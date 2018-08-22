@@ -1,5 +1,5 @@
 <overrides xmlns="http://www.ceylon-lang.org/xsd/overrides">
-    <set module="ceylon.collection" version="1.3.2"/>
+    <set module="ceylon.collection" version="1.3.3"/>
     <set groupId="io.netty" artifactId="netty-common" version="4.1.9.Final"/>
     <set groupId="org.apache.logging.log4j" artifactId="log4j-api" version="2.8.2"/>
     <set groupId="org.slf4j" artifactId="slf4j-api" version="1.7.24"/>
