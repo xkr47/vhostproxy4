@@ -363,7 +363,12 @@ shared class MyVerticle() extends AbstractVerticle() {
                 if (routingContext.failed()) {
                     assert (is Proxy.ProxyException ex = routingContext.failure());
                     if (!routingContext.response().headWritten()) {
-                        value statusMsg = if (exists cause = ex.cause) then cause.message else (ex.reason == Proxy.RejectReason.noHostHeader then "Exhausted resources while trying to extract Host header from the request" else "");
+                        value statusMsg =
+                                if (ex.reason == Proxy.RejectReason.outgoingRequestFail) then "The service is currently unavailable, please try again a bit later."
+                                else if (exists cause = ex.cause) then cause.message
+                                else (ex.reason == Proxy.RejectReason.noHostHeader then "Exhausted resources while trying to extract Host header from the request"
+                                else ""
+                                );
                         routingContext.response().setStatusCode(ex.statusCode);
                         routingContext.response().headers().set("content-type", "text/plain;charset=UTF-8");
                         routingContext.response().end(statusMsg);
