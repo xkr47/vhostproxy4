@@ -181,7 +181,7 @@ String extractHosname(String hostHeader) {
 }
 
 "Resolve the next hop for this request. If no next hop found, the response must be taken care of and null returned."
-Target? resolveNextHop2(HttpServerRequest sreq, Boolean isTls) {
+Target? resolveNextHop2(HttpServerRequest sreq, Boolean isTls, Boolean isTlsWorking) {
     if (sreq.method() == connect) {
         return reject(sreq, 405, "Method not supported", "errors/4xx.html");
     }
@@ -198,7 +198,7 @@ Target? resolveNextHop2(HttpServerRequest sreq, Boolean isTls) {
     if (!exists nextHop) {
         return reject(sreq, 404, "No service defined for ``hostHeader``", "errors/4xx.html");
     }
-    if (nextHop.forceHttps && !isTls) {
+    if (nextHop.forceHttps && !isTls && isTlsWorking) {
         // require user to reload request with https
         value sres = sreq.response();
         value m = sreq.method();

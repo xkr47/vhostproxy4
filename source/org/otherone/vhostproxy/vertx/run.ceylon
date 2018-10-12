@@ -325,6 +325,8 @@ class MyPumpStarter()
 }
 
 shared class MyVerticle() extends AbstractVerticle() {
+    variable Boolean isTlsWorking = false;
+
     shared actual void start() {
         log.info("Verticle starting..");
 
@@ -345,7 +347,7 @@ shared class MyVerticle() extends AbstractVerticle() {
             shared actual void resolveNextHop(RoutingContext routingContext, Handler<Proxy.Target> targetHandler) {
                 try {
                     value isTls = if (exists scheme = routingContext.request().scheme()) then scheme == "https" else false;
-                    value nextHop = resolveNextHop2(routingContext.request(), isTls);
+                    value nextHop = resolveNextHop2(routingContext.request(), isTls, isTlsWorking);
                     if (exists nextHop) {
                         targetHandler.handle(nextHop);
                     }
@@ -463,6 +465,7 @@ shared class MyVerticle() extends AbstractVerticle() {
                         return acmeMgr.start(baseConf);
                     });
                 }).setHandler((ar) {
+                    isTlsWorking = !ar.failed();
                     if (ar.failed()) {
                         log.error("AcmeManager start failed", ar.cause());
                         return;
